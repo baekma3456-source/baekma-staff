@@ -107,6 +107,16 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .c-lbl{font-size:9px;color:#666;font-weight:500;line-height:1.3;}
 .c-val{font-size:12px;font-weight:500;padding:2px 0;border-radius:3px;width:100%;text-align:center;}
 .c-y{background:#EAF3DE;color:#27500A;}.c-n{background:#FCEBEB;color:#791F1F;}.c-dash{background:#F1EFE8;color:#888780;}
+/* 공동명의 가로 스크롤 */
+.joint-scroll{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;margin:0 -2px 4px;padding-bottom:2px;}
+.joint-scroll::-webkit-scrollbar{height:3px;}
+.joint-scroll::-webkit-scrollbar-thumb{background:#d0d4db;border-radius:2px;}
+.joint-person{flex:0 0 auto;min-width:130px;max-width:160px;padding:5px 8px;border-right:0.5px solid #e8eaef;}
+.joint-person:last-child{border-right:none;}
+.jp-name{font-size:13px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.jp-tel{font-size:11px;color:#666;white-space:nowrap;}
+.jp-notel{font-size:11px;color:#bbb;font-style:italic;}
+.jp-res{font-size:10px;margin-top:3px;}
 
 /* ══ TAB 2: 활동 기록 ══ */
 .list-header{display:flex;align-items:center;justify-content:space-between;}
@@ -619,9 +629,9 @@ document.getElementById('danji-sel-summary').addEventListener('change',function(
 ═══════════════════════════════ */
 const DANJI_DONGS = {
   3:[{id:'301',label:'301동'},{id:'302',label:'302동'},{id:'303',label:'303동'},{id:'304',label:'304동'},{id:'305',label:'305동'},{id:'306',label:'306동'},{id:'307',label:'307동'},{id:'308',label:'308동'},{id:'309',label:'309동'},{id:'310',label:'310동'}],
-  4:[{id:'401',label:'401동'},{id:'402',label:'402동'},{id:'403',label:'403동'}],
-  5:[{id:'501',label:'501동'},{id:'502',label:'502동'},{id:'503',label:'503동'}],
-  6:[{id:'601',label:'601동'},{id:'602',label:'602동'}],
+  4:[{id:'401',label:'401동'},{id:'402',label:'402동'},{id:'403',label:'403동'},{id:'404',label:'404동'},{id:'405',label:'405동'},{id:'406',label:'406동'},{id:'407',label:'407동'},{id:'408',label:'408동'},{id:'409',label:'409동'},{id:'410',label:'410동'},{id:'411',label:'411동'},{id:'412',label:'412동'}],
+  5:[{id:'501',label:'501동'},{id:'502',label:'502동'},{id:'503',label:'503동'},{id:'504',label:'504동'},{id:'505',label:'505동'},{id:'506',label:'506동'},{id:'507',label:'507동'},{id:'508',label:'508동'},{id:'509',label:'509동'},{id:'510',label:'510동'},{id:'511',label:'511동'},{id:'512',label:'512동'},{id:'513',label:'513동'},{id:'514',label:'514동'},{id:'515',label:'515동'},{id:'516',label:'516동'}],
+  6:[{id:'601',label:'601동'},{id:'602',label:'602동'},{id:'603',label:'603동'},{id:'604',label:'604동'},{id:'605',label:'605동'},{id:'606',label:'606동'},{id:'607',label:'607동'}],
   s:[{id:'3SS',label:'3단지 상가'},{id:'4SS',label:'4단지 상가'},{id:'4DS',label:'4단지 분산상가'},{id:'5SS',label:'5단지 상가'},{id:'5DS',label:'5단지 분산상가'},{id:'6SS',label:'6단지 상가'},{id:'BMS',label:'백마상가'},{id:'SCS',label:'설촌상가'}],
 };
 
@@ -652,7 +662,9 @@ async function loadDong(dongId){
     let ownerRows;
     const isCommercial = isNaN(parseInt(dongId));
     if(isCommercial){
-      ownerRows = await sbGetAll(`owners?부동산id=like.${encodeURIComponent(dongId+'%')}&select=*&order=부동산id.asc`);
+      // 상가: 부동산id prefix 필터 (% 는 인코딩 안 함)
+      const prefix = encodeURIComponent(dongId);
+      ownerRows = await sbGetAll(`owners?부동산id=ilike.${prefix}*&select=*&order=부동산id.asc`);
     } else {
       ownerRows = await sbGetAll(`owners?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.desc`);
       // 호수를 숫자 기준 내림차순 정렬 (DB의 문자열 정렬 보정)
@@ -722,24 +734,41 @@ function renderOwnerCards(owners, consentMap, payMap){
     const rep = list[0];
     const payTotal = payMap[pid]||0;
     const payY = payTotal>0;
-    const jointBadge = isJoint?`<span class="badge-joint">공동명의 ${list.length}명</span>`:'';
-    const resClass = rep['거주구분']==='거주'?'tag-res-y':'tag-res-n';
-    const resText = rep['거주구분']||'미확인';
     const payText = payY?(payTotal.toLocaleString()+'원'):'미납';
     const payClass = payY?'info-pay-y':'info-pay-n';
+
+    // 소유주 표시: 공동명의면 가로스크롤, 단독이면 기존방식
+    let ownerHtml;
+    if(isJoint){
+      ownerHtml = `<div class="joint-scroll">${list.map(person=>{
+        const resClass2 = person['거주구분']==='거주'?'tag-res-y':'tag-res-n';
+        const resText2 = person['거주구분']||'미확인';
+        return `<div class="joint-person">
+          <div class="jp-name">${person['이름']||'—'}</div>
+          ${person['전화번호']?`<div class="jp-tel">${person['전화번호']}</div>`:'<div class="jp-notel">연락처 없음</div>'}
+          <span class="tag ${resClass2} jp-res">${resText2}</span>
+        </div>`;
+      }).join('')}</div>`;
+    } else {
+      const resClass = rep['거주구분']==='거주'?'tag-res-y':'tag-res-n';
+      const resText = rep['거주구분']||'미확인';
+      ownerHtml = `
+        <div class="info-row"><span class="info-name">${rep['이름']||'—'}</span><span class="${payClass}">${payText}</span></div>
+        <div class="info-row2">${rep['전화번호']?`<span class="info-tel">${rep['전화번호']}</span>`:'<span class="info-notel">연락처 없음</span>'}<span class="tag ${resClass}">${resText}</span></div>`;
+    }
+
     return `<div class="ocard"
       data-pid="${pid}"
-      data-name="${rep['이름']||'—'}"
+      data-name="${list.map(p=>p['이름']||'—').join(' / ')}"
       data-tel="${rep['전화번호']||'—'}"
-      data-res="${resText}"
+      data-res="${rep['거주구분']||'미확인'}"
       data-pay="${payText}"
       data-area="${rep['전유면적']||'—'}"
       data-land="${rep['대지크기']||'—'}"
       data-otype="${rep['소유형태']||'—'}"
       data-loc="${rep['동']?rep['동']+'동':''} ${rep['호']?rep['호']+'호':''}">
-      <div class="ho-line">${pid}${jointBadge}</div>
-      <div class="info-row"><span class="info-name">${rep['이름']||'—'}</span><span class="${payClass}">${payText}</span></div>
-      <div class="info-row2">${rep['전화번호']?`<span class="info-tel">${rep['전화번호']}</span>`:'<span class="info-notel">연락처 없음</span>'}<span class="tag ${resClass}">${resText}</span></div>
+      <div class="ho-line">${pid}${isJoint?`<span class="badge-joint">공동명의 ${list.length}명</span>`:''}<span class="${payClass}" style="float:right">${isJoint?payText:''}</span></div>
+      ${ownerHtml}
       <div class="divider"></div>
       <div class="consent-grid">
         <div class="c-col"><span class="c-lbl">사전</span>${consentVal(consentMap,pid,1)}</div>
