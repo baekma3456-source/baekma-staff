@@ -414,6 +414,18 @@ async function sbGet(path){
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
+// 1000건 초과 데이터 페이지네이션으로 전부 가져오기
+async function sbGetAll(path, pageSize=1000){
+  let all=[], offset=0;
+  while(true){
+    const sep = path.includes('?') ? '&' : '?';
+    const rows = await sbGet(path + sep + 'limit='+pageSize+'&offset='+offset);
+    all = all.concat(rows);
+    if(rows.length < pageSize) break;
+    offset += pageSize;
+  }
+  return all;
+}
 async function sbPost(path, body){
   const r = await fetch(SB_URL + '/rest/v1/' + path, {
     method:'POST', headers:{...HEADERS,'Prefer':'return=representation'}, body:JSON.stringify(body)
@@ -515,7 +527,7 @@ let currentSummaryDanji = 3;
 async function loadSummaryData(){
   try {
     // 소유주 수
-    const ownerRows = await sbGet('owners?select=부동산id,동&limit=5000');
+    const ownerRows = await sbGetAll('owners?select=부동산id,동');
     summaryAllOwners = ownerRows;
     const total = ownerRows.length;
     // 아파트/상가 분류
@@ -525,7 +537,7 @@ async function loadSummaryData(){
     document.getElementById('kpi-total-sub').textContent = `아파트 ${apt.toLocaleString()} · 상가 ${com.toLocaleString()}`;
 
     // 동의서 전체
-    const consentRows = await sbGet('consent_records?select=부동산id,차수,상태&limit=20000');
+    const consentRows = await sbGetAll('consent_records?select=부동산id,차수,상태');
     summaryAllConsent = consentRows;
 
     renderKpi(currentSummaryConsent);
