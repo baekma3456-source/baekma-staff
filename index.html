@@ -531,14 +531,13 @@ function getDanjiKey(dong){
 }
 
 let summaryAllOwners = [];
-let summaryAllConsent = [];
 let currentSummaryConsent = 4;
 let currentSummaryDanji = 3;
 
 async function loadSummaryData(){
   try {
     // 소유주 수
-    const ownerRows = await sbGetAll('owners?select=연번,부동산id,동');
+    const ownerRows = await sbGetAll('owners?select=연번,부동산id,동,사전,컨설팅,선도,주대단');
     summaryAllOwners = ownerRows;
     // 분모: 고유 연번 수
     const uniqueYeonbeon = new Set(ownerRows.map(o=>o['연번']).filter(Boolean));
@@ -555,10 +554,6 @@ async function loadSummaryData(){
     document.getElementById('kpi-total').textContent = total.toLocaleString()+'연번';
     document.getElementById('kpi-total-sub').textContent = `아파트 ${apt.toLocaleString()} · 상가 ${com.toLocaleString()}`;
 
-    // 동의서 전체
-    const consentRows = await sbGetAll('consent_records?select=부동산id,차수,상태');
-    summaryAllConsent = consentRows;
-
     renderKpi(currentSummaryConsent);
     renderBars();
   } catch(e){
@@ -567,33 +562,39 @@ async function loadSummaryData(){
   }
 }
 
-function renderKpi(차수){
-  const consentOfRound = summaryAllConsent.filter(c=>c['차수']===차수);
+// 차수 번호 → owners 테이블 컬럼명
+const ROUND_COL = {1:'사전', 2:'컨설팅', 3:'선도', 4:'주대단'};
 
-  // 부동산ID별 제출 여부 먼저 결정 (한 명이라도 제출 = 제출)
-  const pidStatusMap = {};
-  consentOfRound.forEach(c=>{
-    const pid = c['부동산id'];
-    if(!pidStatusMap[pid]) pidStatusMap[pid] = '미제출';
-    if(c['상태']==='제출') pidStatusMap[pid] = '제출';
-    else if(c['상태']==='반대' && pidStatusMap[pid]!=='제출') pidStatusMap[pid] = '반대';
-  });
+// owners 행에서 해당 차수의 제출 여부
+function isSubmitted(owner, 차수){
+  const col = ROUND_COL[차수];
+  return col && owner[col]==='제출';
+}
+function isOppose(owner, 차수){
+  const col = ROUND_COL[차수];
+  return col && owner[col]==='반대';
+}
 
-  // 연번별로 그룹핑 — 해당 연번의 부동산ID 중 하나라도 제출이면 그 연번은 제출
-  const yeonbeonStatusMap = {};
-  summaryAllOwners.forEach(o=>{
+// 연번별 동의 상태 계산 (owners 배열 기준)
+// 같은 연번 내 한 명이라도 제출이면 → 제출
+// 아무도 제출 안하고 반대가 있으면 → 반대
+// 그 외 → 미제출
+function calcYeonbeonStatus(owners, 차수){
+  const map = {}; // yb → 상태
+  owners.forEach(o=>{
     const yb = o['연번'];
-    const pid = o['부동산id'];
-    if(!yb || !pid) return;
-    if(!yeonbeonStatusMap[yb]) yeonbeonStatusMap[yb] = '미제출';
-    const pidStatus = pidStatusMap[pid] || '미제출';
-    if(pidStatus==='제출') yeonbeonStatusMap[yb] = '제출';
-    else if(pidStatus==='반대' && yeonbeonStatusMap[yb]!=='제출') yeonbeonStatusMap[yb] = '반대';
+    if(!yb) return;
+    if(!map[yb]) map[yb] = '미제출';
+    if(isSubmitted(o, 차수)) map[yb] = '제출';
+    else if(isOppose(o, 차수) && map[yb]!=='제출') map[yb] = '반대';
   });
+  return map;
+}
 
-  // 분모: 전체 고유 연번 수 / 분자: 제출된 연번 수
-  const total = Object.keys(yeonbeonStatusMap).length || 1;
-  const submitted = Object.values(yeonbeonStatusMap).filter(s=>s==='제출').length;
+function renderKpi(차수){
+  const ybMap = calcYeonbeonStatus(summaryAllOwners, 차수);
+  const total = Object.keys(ybMap).length || 1;
+  const submitted = Object.values(ybMap).filter(s=>s==='제출').length;
   const pct = (submitted/total*100).toFixed(1);
   document.getElementById('kpi-pct').textContent = pct+'%';
   document.getElementById('kpi-sub').textContent = `${submitted.toLocaleString()} / ${total.toLocaleString()} 연번`;
@@ -607,7 +608,7 @@ function renderBars(){
   // 해당 단지 소유주 목록
   const danjiOwners = summaryAllOwners.filter(o=>getDanjiKey(o['동'])===danjiKey);
 
-  // ── 연번별 동 매핑 (1연번 = 1동으로 대표) ──
+  // ── 연번별 동 매핑 ──
   const yeonbeonDongMap = {};
   danjiOwners.forEach(o=>{
     const yb = o['연번'];
@@ -615,34 +616,15 @@ function renderBars(){
     if(!yeonbeonDongMap[yb]) yeonbeonDongMap[yb] = o['동']||'미확인';
   });
 
-  // 동별 그룹 — 분모는 연번 수 기준
+  // 동별 그룹 — 분모는 고유 연번 수 기준
   const dongMap = {};
   Object.values(yeonbeonDongMap).forEach(d=>{
     if(!dongMap[d]) dongMap[d]={total:0,submit:0,oppose:0};
     dongMap[d].total++;
   });
 
-  // ── 부동산ID별 제출 여부 결정 ──
-  const consentOfRound = summaryAllConsent.filter(c=>c['차수']===차수);
-  const pidStatusMap = {};
-  consentOfRound.forEach(c=>{
-    const pid = c['부동산id'];
-    if(!pidStatusMap[pid]) pidStatusMap[pid] = '미제출';
-    if(c['상태']==='제출') pidStatusMap[pid] = '제출';
-    else if(c['상태']==='반대' && pidStatusMap[pid]!=='제출') pidStatusMap[pid] = '반대';
-  });
-
-  // ── 연번별 제출 여부 결정 (같은 연번의 부동산ID 중 하나라도 제출 = 제출) ──
-  const yeonbeonStatusMap = {};
-  danjiOwners.forEach(o=>{
-    const yb = o['연번'];
-    const pid = o['부동산id'];
-    if(!yb || !pid) return;
-    if(!yeonbeonStatusMap[yb]) yeonbeonStatusMap[yb] = '미제출';
-    const pidStatus = pidStatusMap[pid] || '미제출';
-    if(pidStatus==='제출') yeonbeonStatusMap[yb] = '제출';
-    else if(pidStatus==='반대' && yeonbeonStatusMap[yb]!=='제출') yeonbeonStatusMap[yb] = '반대';
-  });
+  // ── 연번별 제출 상태 계산 (owners 컬럼 기반) ──
+  const yeonbeonStatusMap = calcYeonbeonStatus(danjiOwners, 차수);
 
   // ── 동별 집계 ──
   Object.entries(yeonbeonStatusMap).forEach(([yb, status])=>{
@@ -731,22 +713,23 @@ async function loadDong(dongId){
     // 해당 동 부동산ID 목록
     const pids = ownerRows.map(o=>o['부동산id']).filter(Boolean);
 
-    // 동의서 4차수 한번에 조회
+    // 동의서: owners 컬럼(사전/컨설팅/선도/주대단)에서 직접 구성
+    // 같은 부동산id에 여러 명(공동명의)이 있을 경우 한 명이라도 제출이면 제출
     let consentMap = {};
-    if(pids.length>0){
-      const pidFilter = pids.map(p=>`부동산id.eq.${p}`).join(',');
-      const consentRows = await sbGet(`consent_records?or=(${encodeURIComponent(pidFilter)})&select=부동산id,차수,상태&limit=2000`);
-      consentRows.forEach(c=>{
-        const pid = c['부동산id'];
-        const round = c['차수'];
-        if(!consentMap[pid]) consentMap[pid]={};
-        // 한 명이라도 제출이면 제출로 유지 (제출 우선)
+    ownerRows.forEach(o=>{
+      const pid = o['부동산id'];
+      if(!pid) return;
+      if(!consentMap[pid]) consentMap[pid]={};
+      [1,2,3,4].forEach(round=>{
+        const col = {1:'사전',2:'컨설팅',3:'선도',4:'주대단'}[round];
+        const val = o[col];
         const prev = consentMap[pid][round];
-        if(!prev) consentMap[pid][round] = c['상태'];
-        else if(c['상태']==='제출') consentMap[pid][round] = '제출';
-        else if(c['상태']==='반대' && prev!=='제출') consentMap[pid][round] = '반대';
+        const status = val==='제출'?'제출':val==='반대'?'반대':'미제출';
+        if(!prev) consentMap[pid][round] = status;
+        else if(status==='제출') consentMap[pid][round] = '제출';
+        else if(status==='반대' && prev!=='제출') consentMap[pid][round] = '반대';
       });
-    }
+    });
 
     // 납부 합계
     let payMap = {};
@@ -879,19 +862,20 @@ async function openPopup(card){
 
   try {
     const [consentRows, payRows, actRows] = await Promise.all([
-      sbGet(`consent_records?부동산id=eq.${encodeURIComponent(pid)}&select=차수,상태`),
+      sbGet(`owners?%EB%B6%80%EB%8F%99%EC%82%B0id=eq.${encodeURIComponent(pid)}&select=사전,컨설팅,선도,주대단`),
       sbGet(`payments?부동산id=eq.${encodeURIComponent(pid)}&select=회차,납부일자,금액&order=회차.asc`),
       sbGet(`activities?부동산id=eq.${encodeURIComponent(pid)}&select=*&order=created_at.desc&limit=20`),
     ]);
 
-    // 동의서
-    const cmap = {};
-    consentRows.forEach(c=>{
-      const round = c['차수'];
-      const prev = cmap[round];
-      if(!prev) cmap[round] = c['상태'];
-      else if(c['상태']==='제출') cmap[round] = '제출';
-      else if(c['상태']==='반대' && prev!=='제출') cmap[round] = '반대';
+    // 동의서: owners 컬럼(사전/컨설팅/선도/주대단) 기반, 공동명의 한 명이라도 제출 = 제출
+    const colMap2 = {1:'사전',2:'컨설팅',3:'선도',4:'주대단'};
+    const cmap = {1:'미제출',2:'미제출',3:'미제출',4:'미제출'};
+    consentRows.forEach(ownerRow=>{
+      [1,2,3,4].forEach(n=>{
+        const val = ownerRow[colMap2[n]];
+        if(val==='제출') cmap[n]='제출';
+        else if(val==='반대' && cmap[n]!=='제출') cmap[n]='반대';
+      });
     });
     document.getElementById('popup-consent-list').innerHTML = [1,2,3,4].map(n=>{
       const s = cmap[n]||'미제출';
