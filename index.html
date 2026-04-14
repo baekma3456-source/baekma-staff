@@ -618,11 +618,11 @@ document.getElementById('danji-sel-summary').addEventListener('change',function(
    TAB 1: 소유주 조회
 ═══════════════════════════════ */
 const DANJI_DONGS = {
-  3:[{id:'301',label:'301동'},{id:'302',label:'302동'},{id:'303',label:'303동'},{id:'304',label:'304동'},{id:'305',label:'305동'},{id:'306',label:'306동'},{id:'307',label:'307동'},{id:'308',label:'308동'},{id:'309',label:'309동'},{id:'310',label:'310동'},{id:'3SS',label:'3단지 상가'}],
-  4:[{id:'401',label:'401동'},{id:'402',label:'402동'},{id:'403',label:'403동'},{id:'4SS',label:'4단지 상가'},{id:'4DS',label:'4단지 분산상가'}],
-  5:[{id:'501',label:'501동'},{id:'502',label:'502동'},{id:'503',label:'503동'},{id:'5SS',label:'5단지 상가'},{id:'5DS',label:'5단지 분산상가'}],
-  6:[{id:'601',label:'601동'},{id:'602',label:'602동'},{id:'6SS',label:'6단지 상가'}],
-  s:[{id:'BMS',label:'백마상가'},{id:'SCS',label:'설촌상가'}],
+  3:[{id:'301',label:'301동'},{id:'302',label:'302동'},{id:'303',label:'303동'},{id:'304',label:'304동'},{id:'305',label:'305동'},{id:'306',label:'306동'},{id:'307',label:'307동'},{id:'308',label:'308동'},{id:'309',label:'309동'},{id:'310',label:'310동'}],
+  4:[{id:'401',label:'401동'},{id:'402',label:'402동'},{id:'403',label:'403동'}],
+  5:[{id:'501',label:'501동'},{id:'502',label:'502동'},{id:'503',label:'503동'}],
+  6:[{id:'601',label:'601동'},{id:'602',label:'602동'}],
+  s:[{id:'3SS',label:'3단지 상가'},{id:'4SS',label:'4단지 상가'},{id:'4DS',label:'4단지 분산상가'},{id:'5SS',label:'5단지 상가'},{id:'5DS',label:'5단지 분산상가'},{id:'6SS',label:'6단지 상가'},{id:'BMS',label:'백마상가'},{id:'SCS',label:'설촌상가'}],
 };
 
 let currentDongId = '301동';
@@ -654,7 +654,9 @@ async function loadDong(dongId){
     if(isCommercial){
       ownerRows = await sbGetAll(`owners?부동산id=like.${encodeURIComponent(dongId+'%')}&select=*&order=부동산id.asc`);
     } else {
-      ownerRows = await sbGetAll(`owners?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.asc`);
+      ownerRows = await sbGetAll(`owners?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.desc`);
+      // 호수를 숫자 기준 내림차순 정렬 (DB의 문자열 정렬 보정)
+      ownerRows.sort((a,b)=>(parseInt(b['호'])||0)-(parseInt(a['호'])||0));
     }
 
     // 해당 동 부동산ID 목록
