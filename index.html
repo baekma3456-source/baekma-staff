@@ -509,8 +509,9 @@ const DANJI_NAMES   = {3:'3단지',4:'4단지',5:'5단지',6:'6단지',s:'상가
 
 // 동 → 단지 분류 함수
 function getDanjiKey(dong){
+  if(!dong) return 's';
   const commercialPrefixes = ['3SS','4SS','4DS','5SS','5DS','6SS','BMS','SCS'];
-  if(commercialPrefixes.some(p => dong && dong.startsWith(p))) return 's';
+  if(commercialPrefixes.some(p => dong.startsWith(p))) return 's';
   const num = parseInt(dong);
   if(num>=301&&num<=399) return 3;
   if(num>=401&&num<=499) return 4;
@@ -617,10 +618,10 @@ document.getElementById('danji-sel-summary').addEventListener('change',function(
    TAB 1: 소유주 조회
 ═══════════════════════════════ */
 const DANJI_DONGS = {
-  3:[{id:'301동'},{id:'302동'},{id:'303동'},{id:'304동'},{id:'305동'},{id:'306동'},{id:'307동'},{id:'308동'},{id:'309동'},{id:'310동'},{id:'3SS',label:'3단지 상가'}],
-  4:[{id:'401동'},{id:'402동'},{id:'403동'},{id:'4SS',label:'4단지 상가'},{id:'4DS',label:'4단지 분산상가'}],
-  5:[{id:'501동'},{id:'502동'},{id:'503동'},{id:'5SS',label:'5단지 상가'},{id:'5DS',label:'5단지 분산상가'}],
-  6:[{id:'601동'},{id:'602동'},{id:'6SS',label:'6단지 상가'}],
+  3:[{id:'301',label:'301동'},{id:'302',label:'302동'},{id:'303',label:'303동'},{id:'304',label:'304동'},{id:'305',label:'305동'},{id:'306',label:'306동'},{id:'307',label:'307동'},{id:'308',label:'308동'},{id:'309',label:'309동'},{id:'310',label:'310동'},{id:'3SS',label:'3단지 상가'}],
+  4:[{id:'401',label:'401동'},{id:'402',label:'402동'},{id:'403',label:'403동'},{id:'4SS',label:'4단지 상가'},{id:'4DS',label:'4단지 분산상가'}],
+  5:[{id:'501',label:'501동'},{id:'502',label:'502동'},{id:'503',label:'503동'},{id:'5SS',label:'5단지 상가'},{id:'5DS',label:'5단지 분산상가'}],
+  6:[{id:'601',label:'601동'},{id:'602',label:'602동'},{id:'6SS',label:'6단지 상가'}],
   s:[{id:'BMS',label:'백마상가'},{id:'SCS',label:'설촌상가'}],
 };
 
@@ -628,7 +629,7 @@ let currentDongId = '301동';
 let currentDongOwners = [];
 let allOwnersCache = null; // 검색용 전체 캐시
 
-function getDongLabel(d){ return d.label||d.id; }
+function getDongLabel(d){ return d.label||(isNaN(parseInt(d.id))?d.id:d.id+'동'); }
 
 function updateDongSel(key){
   const dongs = DANJI_DONGS[key]||DANJI_DONGS[3];
@@ -638,8 +639,8 @@ function updateDongSel(key){
 }
 
 async function initLookup(){
-  updateDongSel(3);
-  await loadDong('301동');
+  const firstId = updateDongSel(3);
+  await loadDong(firstId);
 }
 
 async function loadDong(dongId){
@@ -651,9 +652,9 @@ async function loadDong(dongId){
     let ownerRows;
     const isCommercial = isNaN(parseInt(dongId));
     if(isCommercial){
-      ownerRows = await sbGet(`owners?부동산id=like.${encodeURIComponent(dongId+'%')}&select=*&order=부동산id.asc&limit=500`);
+      ownerRows = await sbGetAll(`owners?부동산id=like.${encodeURIComponent(dongId+'%')}&select=*&order=부동산id.asc`);
     } else {
-      ownerRows = await sbGet(`owners?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.asc&limit=500`);
+      ownerRows = await sbGetAll(`owners?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.asc`);
     }
 
     // 해당 동 부동산ID 목록
@@ -733,7 +734,7 @@ function renderOwnerCards(owners, consentMap, payMap){
       data-area="${rep['전유면적']||'—'}"
       data-land="${rep['대지크기']||'—'}"
       data-otype="${rep['소유형태']||'—'}"
-      data-loc="${rep['동']||''} ${rep['호']||''}">
+      data-loc="${rep['동']?rep['동']+'동':''} ${rep['호']?rep['호']+'호':''}">
       <div class="ho-line">${pid}${jointBadge}</div>
       <div class="info-row"><span class="info-name">${rep['이름']||'—'}</span><span class="${payClass}">${payText}</span></div>
       <div class="info-row2">${rep['전화번호']?`<span class="info-tel">${rep['전화번호']}</span>`:'<span class="info-notel">연락처 없음</span>'}<span class="tag ${resClass}">${resText}</span></div>
