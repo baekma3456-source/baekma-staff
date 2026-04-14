@@ -538,13 +538,21 @@ let currentSummaryDanji = 3;
 async function loadSummaryData(){
   try {
     // 소유주 수
-    const ownerRows = await sbGetAll('owners?select=부동산id,동');
+    const ownerRows = await sbGetAll('owners?select=연번,부동산id,동');
     summaryAllOwners = ownerRows;
-    const total = ownerRows.length;
-    // 아파트/상가 분류
-    const apt = ownerRows.filter(o=>{ const d=getDanjiKey(o['동']); return d!=='s'; }).length;
+    // 분모: 고유 연번 수
+    const uniqueYeonbeon = new Set(ownerRows.map(o=>o['연번']).filter(Boolean));
+    const total = uniqueYeonbeon.size;
+    // 아파트/상가 분류 (연번 기준 고유 카운트)
+    const yeonbeonDanjiMap = {};
+    ownerRows.forEach(o=>{
+      const yb = o['연번'];
+      if(!yb) return;
+      if(!yeonbeonDanjiMap[yb]) yeonbeonDanjiMap[yb] = getDanjiKey(o['동']);
+    });
+    const apt = Object.values(yeonbeonDanjiMap).filter(d=>d!=='s').length;
     const com = total - apt;
-    document.getElementById('kpi-total').textContent = total.toLocaleString()+'명';
+    document.getElementById('kpi-total').textContent = total.toLocaleString()+'연번';
     document.getElementById('kpi-total-sub').textContent = `아파트 ${apt.toLocaleString()} · 상가 ${com.toLocaleString()}`;
 
     // 동의서 전체
@@ -561,11 +569,34 @@ async function loadSummaryData(){
 
 function renderKpi(차수){
   const consentOfRound = summaryAllConsent.filter(c=>c['차수']===차수);
-  const submitted = consentOfRound.filter(c=>c['상태']==='제출').length;
-  const total = summaryAllOwners.length || 1;
+
+  // 부동산ID별 제출 여부 먼저 결정 (한 명이라도 제출 = 제출)
+  const pidStatusMap = {};
+  consentOfRound.forEach(c=>{
+    const pid = c['부동산id'];
+    if(!pidStatusMap[pid]) pidStatusMap[pid] = '미제출';
+    if(c['상태']==='제출') pidStatusMap[pid] = '제출';
+    else if(c['상태']==='반대' && pidStatusMap[pid]!=='제출') pidStatusMap[pid] = '반대';
+  });
+
+  // 연번별로 그룹핑 — 해당 연번의 부동산ID 중 하나라도 제출이면 그 연번은 제출
+  const yeonbeonStatusMap = {};
+  summaryAllOwners.forEach(o=>{
+    const yb = o['연번'];
+    const pid = o['부동산id'];
+    if(!yb || !pid) return;
+    if(!yeonbeonStatusMap[yb]) yeonbeonStatusMap[yb] = '미제출';
+    const pidStatus = pidStatusMap[pid] || '미제출';
+    if(pidStatus==='제출') yeonbeonStatusMap[yb] = '제출';
+    else if(pidStatus==='반대' && yeonbeonStatusMap[yb]!=='제출') yeonbeonStatusMap[yb] = '반대';
+  });
+
+  // 분모: 전체 고유 연번 수 / 분자: 제출된 연번 수
+  const total = Object.keys(yeonbeonStatusMap).length || 1;
+  const submitted = Object.values(yeonbeonStatusMap).filter(s=>s==='제출').length;
   const pct = (submitted/total*100).toFixed(1);
   document.getElementById('kpi-pct').textContent = pct+'%';
-  document.getElementById('kpi-sub').textContent = submitted.toLocaleString()+'명 제출';
+  document.getElementById('kpi-sub').textContent = `${submitted.toLocaleString()} / ${total.toLocaleString()} 연번`;
   document.getElementById('kpi-bar').style.width = pct+'%';
 }
 
@@ -575,23 +606,50 @@ function renderBars(){
 
   // 해당 단지 소유주 목록
   const danjiOwners = summaryAllOwners.filter(o=>getDanjiKey(o['동'])===danjiKey);
-  // 동별 그룹
-  const dongMap = {};
+
+  // ── 연번별 동 매핑 (1연번 = 1동으로 대표) ──
+  const yeonbeonDongMap = {};
   danjiOwners.forEach(o=>{
-    const d = o['동']||'미확인';
+    const yb = o['연번'];
+    if(!yb) return;
+    if(!yeonbeonDongMap[yb]) yeonbeonDongMap[yb] = o['동']||'미확인';
+  });
+
+  // 동별 그룹 — 분모는 연번 수 기준
+  const dongMap = {};
+  Object.values(yeonbeonDongMap).forEach(d=>{
     if(!dongMap[d]) dongMap[d]={total:0,submit:0,oppose:0};
     dongMap[d].total++;
   });
-  // 동의서 현황
+
+  // ── 부동산ID별 제출 여부 결정 ──
   const consentOfRound = summaryAllConsent.filter(c=>c['차수']===차수);
+  const pidStatusMap = {};
   consentOfRound.forEach(c=>{
-    // 해당 소유주 동 찾기
-    const owner = summaryAllOwners.find(o=>o['부동산id']===c['부동산id']);
-    if(!owner) return;
-    const d = owner['동']||'미확인';
-    if(!dongMap[d]) return;
-    if(c['상태']==='제출') dongMap[d].submit++;
-    else if(c['상태']==='반대') dongMap[d].oppose++;
+    const pid = c['부동산id'];
+    if(!pidStatusMap[pid]) pidStatusMap[pid] = '미제출';
+    if(c['상태']==='제출') pidStatusMap[pid] = '제출';
+    else if(c['상태']==='반대' && pidStatusMap[pid]!=='제출') pidStatusMap[pid] = '반대';
+  });
+
+  // ── 연번별 제출 여부 결정 (같은 연번의 부동산ID 중 하나라도 제출 = 제출) ──
+  const yeonbeonStatusMap = {};
+  danjiOwners.forEach(o=>{
+    const yb = o['연번'];
+    const pid = o['부동산id'];
+    if(!yb || !pid) return;
+    if(!yeonbeonStatusMap[yb]) yeonbeonStatusMap[yb] = '미제출';
+    const pidStatus = pidStatusMap[pid] || '미제출';
+    if(pidStatus==='제출') yeonbeonStatusMap[yb] = '제출';
+    else if(pidStatus==='반대' && yeonbeonStatusMap[yb]!=='제출') yeonbeonStatusMap[yb] = '반대';
+  });
+
+  // ── 동별 집계 ──
+  Object.entries(yeonbeonStatusMap).forEach(([yb, status])=>{
+    const d = yeonbeonDongMap[yb];
+    if(!d || !dongMap[d]) return;
+    if(status==='제출') dongMap[d].submit++;
+    else if(status==='반대') dongMap[d].oppose++;
   });
 
   document.getElementById('consent-label').textContent = CONSENT_NAMES[차수]+' · '+DANJI_NAMES[danjiKey];
@@ -679,8 +737,14 @@ async function loadDong(dongId){
       const pidFilter = pids.map(p=>`부동산id.eq.${p}`).join(',');
       const consentRows = await sbGet(`consent_records?or=(${encodeURIComponent(pidFilter)})&select=부동산id,차수,상태&limit=2000`);
       consentRows.forEach(c=>{
-        if(!consentMap[c['부동산id']]) consentMap[c['부동산id']]={};
-        consentMap[c['부동산id']][c['차수']] = c['상태'];
+        const pid = c['부동산id'];
+        const round = c['차수'];
+        if(!consentMap[pid]) consentMap[pid]={};
+        // 한 명이라도 제출이면 제출로 유지 (제출 우선)
+        const prev = consentMap[pid][round];
+        if(!prev) consentMap[pid][round] = c['상태'];
+        else if(c['상태']==='제출') consentMap[pid][round] = '제출';
+        else if(c['상태']==='반대' && prev!=='제출') consentMap[pid][round] = '반대';
       });
     }
 
@@ -822,7 +886,13 @@ async function openPopup(card){
 
     // 동의서
     const cmap = {};
-    consentRows.forEach(c=>{ cmap[c['차수']]=c['상태']; });
+    consentRows.forEach(c=>{
+      const round = c['차수'];
+      const prev = cmap[round];
+      if(!prev) cmap[round] = c['상태'];
+      else if(c['상태']==='제출') cmap[round] = '제출';
+      else if(c['상태']==='반대' && prev!=='제출') cmap[round] = '반대';
+    });
     document.getElementById('popup-consent-list').innerHTML = [1,2,3,4].map(n=>{
       const s = cmap[n]||'미제출';
       const cls = s==='제출'?'badge-o':s==='반대'?'badge-x':'badge-dash';
