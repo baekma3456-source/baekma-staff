@@ -660,11 +660,10 @@ async function loadDong(dongId){
   try {
     // 동 필터링: 아파트동은 '동' 컬럼, 상가는 부동산id prefix로
     let ownerRows;
-    const isCommercial = isNaN(parseInt(dongId));
+    const isCommercial = !/^\d+$/.test(dongId);  // 순수 숫자만 아파트, 나머지(3SS, 4DS, BMS 등)는 상가
     if(isCommercial){
-      // 상가: 부동산id prefix 필터 (% 는 인코딩 안 함)
-      const prefix = encodeURIComponent(dongId);
-      ownerRows = await sbGetAll(`owners?부동산id=ilike.${prefix}*&select=*&order=부동산id.asc`);
+      // 상가: 부동산id prefix 필터
+      ownerRows = await sbGetAll(`owners?부동산id=ilike.${encodeURIComponent(dongId)}*&select=*&order=부동산id.asc`);
     } else {
       ownerRows = await sbGetAll(`owners?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.desc`);
       // 호수를 숫자 기준 내림차순 정렬 (DB의 문자열 정렬 보정)
