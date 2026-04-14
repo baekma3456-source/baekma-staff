@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>백마마을 통합재건축 — 주민대표단</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px;color:#1a1a1a;background:#e8eaef;display:flex;justify-content:center;min-height:100vh;}
+.phone{width:100%;max-width:400px;background:#f0f2f5;min-height:100vh;display:flex;flex-direction:column;position:relative;}
+
+/* ══ LOGIN ══ */
+#screen-login{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(165deg,#152d4a 0%,#1e3a5f 50%,#2d5a8e 100%);padding:40px 28px;position:relative;overflow:hidden;}
+#screen-login::before{content:'';position:absolute;top:-100px;right:-80px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,0.04);}
+#screen-login::after{content:'';position:absolute;bottom:-80px;left:-60px;width:240px;height:240px;border-radius:50%;background:rgba(74,144,217,0.09);}
+.login-inner{width:100%;max-width:340px;position:relative;z-index:1;}
+.login-header{text-align:center;margin-bottom:36px;}
+.login-emblem{width:62px;height:62px;border-radius:16px;margin:0 auto 14px;background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;font-size:26px;}
+.login-title{font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.3px;margin-bottom:3px;}
+.login-sub{font-size:11px;color:rgba(255,255,255,0.48);letter-spacing:0.5px;}
+.login-card{background:rgba(255,255,255,0.97);border-radius:18px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,0.22);}
+.f-label{font-size:10px;font-weight:500;color:#4a5568;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;display:block;}
+.f-group{margin-bottom:15px;}
+.f-input{width:100%;padding:12px 14px;font-size:13px;font-family:inherit;border:1.5px solid #d8dfe8;border-radius:10px;background:#fff;color:#1a1a1a;outline:none;transition:border-color .2s,box-shadow .2s;}
+.f-input:focus{border-color:#2d5a8e;box-shadow:0 0 0 3px rgba(45,90,142,0.10);}
+.f-input::placeholder{color:#b0bec5;}
+.login-btn{width:100%;padding:13px;font-size:14px;font-weight:700;font-family:inherit;background:linear-gradient(135deg,#1e3a5f,#2d5a8e);color:#fff;border:none;border-radius:10px;cursor:pointer;letter-spacing:0.2px;box-shadow:0 4px 14px rgba(30,58,95,0.30);transition:opacity .15s,transform .1s;}
+.login-btn:active{transform:scale(0.98);opacity:0.92;}
+.login-btn:disabled{opacity:0.6;cursor:not-allowed;}
+.login-err{display:none;margin-top:10px;padding:9px 12px;background:#FDECEA;border-radius:8px;font-size:11px;color:#c62828;text-align:center;}
+.login-err.show{display:block;}
+.login-footer{margin-top:22px;text-align:center;font-size:10px;color:rgba(255,255,255,0.38);line-height:1.8;}
+
+/* ══ MAIN APP ══ */
+#screen-main{flex:1;display:none;flex-direction:column;}
+.topbar{background:#1e3a5f;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.t-main{color:#fff;font-size:12px;font-weight:500;}
+.t-user{display:flex;align-items:center;gap:6px;}
+.t-badge{background:#2d5a8e;color:#B5D4F4;font-size:10px;padding:1px 7px;border-radius:10px;}
+.t-name{color:#a0b8d0;font-size:11px;}
+.t-logout{font-size:10px;color:rgba(255,255,255,0.45);padding:3px 8px;border:1px solid rgba(255,255,255,0.15);border-radius:5px;background:transparent;cursor:pointer;font-family:inherit;}
+.tabs{background:#e8eaef;display:flex;border-bottom:0.5px solid #d0d4db;flex-shrink:0;}
+.tab{padding:9px 0;font-size:11px;color:#666;flex:1;text-align:center;cursor:pointer;}
+.tab.on{background:#1e3a5f;color:#fff;font-weight:500;}
+.tab-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.tab-panel{display:none;padding:10px;flex-direction:column;gap:10px;}
+.tab-panel.active{display:flex;}
+
+/* ══ 로딩 스피너 ══ */
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:10px;}
+.spinner{width:28px;height:28px;border:3px solid #d0d4db;border-top-color:#1e3a5f;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-txt{font-size:11px;color:#888;}
+
+/* ══ TAB 0: 종합 ══ */
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.kpi-card{background:#fff;border:0.5px solid #d0d4db;border-radius:8px;padding:10px 12px;}
+.kpi-lbl{font-size:10px;color:#666;margin-bottom:4px;}
+.kpi-val{font-size:20px;font-weight:500;color:#1e3a5f;}
+.kpi-sub{font-size:10px;color:#666;margin-top:2px;}
+.kpi-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.kpi-lbl2{font-size:10px;color:#666;}
+.dd-sm{padding:2px 6px;font-size:10px;border:0.5px solid rgba(0,0,0,0.25);border-radius:4px;background:#fff;color:#1a1a1a;outline:none;font-family:inherit;}
+.kpi-pct{font-size:22px;font-weight:500;color:#3B6D11;}
+.kpi-sub2{font-size:10px;color:#666;margin-top:2px;}
+.pct-track{height:6px;background:#f0f0f0;border-radius:3px;margin-top:6px;overflow:hidden;}
+.pct-fill{height:100%;background:#3B6D11;border-radius:3px;transition:width .3s;}
+.section-card{background:#fff;border:0.5px solid #d0d4db;border-radius:8px;padding:10px 12px;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.section-title{font-size:12px;font-weight:500;}
+.dd-select{padding:4px 8px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#1a1a1a;outline:none;font-family:inherit;}
+.section-sub{font-size:10px;color:#666;margin-bottom:10px;}
+.bar-block{margin-bottom:10px;}.bar-block:last-child{margin-bottom:0;}
+.bar-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;}
+.bar-dong{font-size:11px;font-weight:500;}.bar-pct{font-size:11px;font-weight:500;color:#3B6D11;}
+.bar-track{height:8px;background:#f0f0f0;border-radius:4px;display:flex;overflow:hidden;}
+.bs{background:#3B6D11;height:100%;}.bo{background:#E24B4A;height:100%;}.bn{background:#e8e8e8;height:100%;}
+.bar-ft{display:flex;gap:8px;margin-top:3px;}
+.leg{display:flex;align-items:center;gap:3px;font-size:10px;color:#666;}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dy{background:#3B6D11;}.dn{background:#E24B4A;}.dg{background:#ccc;}
+
+/* ══ TAB 1: 소유주 조회 ══ */
+.filter-row{display:flex;gap:6px;}
+.filter-row select,.owner-row select{flex:1;padding:5px 6px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#1a1a1a;outline:none;font-family:inherit;}
+.owner-row select{width:100%;}
+.meta-row{display:flex;justify-content:space-between;align-items:center;}
+.cnt{font-size:10px;color:#666;}.hint{font-size:10px;color:#888;font-style:italic;}
+.cards{display:flex;flex-direction:column;gap:8px;}
+.ocard{background:#fff;border:0.5px solid #d0d4db;border-radius:8px;padding:10px 12px;cursor:pointer;user-select:none;}
+.ocard:active{background:#f5f8ff;}
+.ho-line{font-size:11px;color:#666;margin-bottom:6px;}
+.badge-joint{font-size:10px;padding:1px 7px;border-radius:10px;background:#FAEEDA;color:#633806;margin-left:6px;}
+.badge-multi{font-size:10px;padding:1px 7px;border-radius:10px;background:#E6F1FB;color:#0C447C;margin-left:6px;}
+.info-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.info-name{font-size:13px;font-weight:500;}
+.info-pay-y{font-size:11px;font-weight:500;color:#27500A;}
+.info-pay-n{font-size:11px;font-weight:500;color:#A32D2D;}
+.info-row2{display:flex;align-items:center;justify-content:space-between;}
+.info-tel{font-size:11px;color:#666;}.info-notel{font-size:11px;color:#888;font-style:italic;}
+.tag{font-size:10px;padding:2px 7px;border-radius:4px;}
+.tag-res-y{background:#E6F1FB;color:#0C447C;}
+.tag-res-n{background:#F1EFE8;color:#5F5E5A;}
+.divider{height:0.5px;background:#d0d4db;margin:8px 0;}
+.consent-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center;}
+.c-col{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.c-lbl{font-size:9px;color:#666;font-weight:500;line-height:1.3;}
+.c-val{font-size:12px;font-weight:500;padding:2px 0;border-radius:3px;width:100%;text-align:center;}
+.c-y{background:#EAF3DE;color:#27500A;}.c-n{background:#FCEBEB;color:#791F1F;}.c-dash{background:#F1EFE8;color:#888780;}
+
+/* ══ TAB 2: 활동 기록 ══ */
+.list-header{display:flex;align-items:center;justify-content:space-between;}
+.list-lbl{font-size:12px;font-weight:500;}
+.new-btn{padding:4px 12px;font-size:11px;background:#1e3a5f;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;}
+.date-group{margin-bottom:4px;}
+.date-lbl{font-size:10px;font-weight:500;color:#666;background:#e8eaef;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:6px;}
+.act-card{background:#fff;border:0.5px solid #d0d4db;border-radius:8px;padding:10px 12px;margin-bottom:6px;}
+.act-card:last-child{margin-bottom:0;}
+.act-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.act-left{display:flex;align-items:center;gap:6px;}
+.act-type-badge{font-size:11px;font-weight:500;background:#E6F1FB;color:#0C447C;padding:1px 7px;border-radius:4px;}
+.act-who{font-size:11px;color:#666;}
+.act-time{font-size:10px;color:#888;}
+.act-target{font-size:12px;font-weight:500;margin-bottom:3px;}
+.act-target span{font-size:11px;font-weight:400;color:#666;margin-left:4px;}
+.act-content{font-size:11px;color:#666;margin-bottom:5px;}
+.act-result{font-size:10px;padding:1px 8px;border-radius:4px;display:inline-block;}
+.res-done{background:#EAF3DE;color:#27500A;}
+.res-revisit{background:#FAEEDA;color:#633806;}
+.res-absent{background:#F1EFE8;color:#888780;}
+.res-accept{background:#EAF3DE;color:#27500A;}
+.res-other{background:#F1EFE8;color:#888780;}
+
+/* ══ 작성 폼 오버레이 ══ */
+.form-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:200;align-items:flex-end;justify-content:center;}
+.form-overlay.show{display:flex;}
+.form-sheet{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:400px;padding:14px 14px 32px;max-height:92vh;overflow-y:auto;}
+.form-title{font-size:13px;font-weight:500;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.form-close{color:#888;font-size:20px;cursor:pointer;line-height:1;padding:0 4px;}
+.form-auto{display:flex;gap:8px;margin-bottom:12px;}
+.auto-item{flex:1;background:#f5f7fa;border:0.5px solid #d0d4db;border-radius:6px;padding:6px 8px;}
+.auto-lbl{font-size:9px;color:#888;margin-bottom:2px;}
+.auto-val{font-size:11px;font-weight:500;}
+.form-section{margin-bottom:12px;}
+.form-lbl{font-size:11px;font-weight:500;margin-bottom:6px;}
+.owner-search{width:100%;padding:7px 10px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#1a1a1a;outline:none;font-family:inherit;}
+.owner-search:focus{border-color:#1e3a5f;}
+.search-result{background:#f5f7fa;border:0.5px solid #d0d4db;border-radius:6px;margin-top:4px;overflow:hidden;display:none;max-height:160px;overflow-y:auto;}
+.search-result.show{display:block;}
+.search-item{padding:7px 10px;font-size:11px;cursor:pointer;border-bottom:0.5px solid #d0d4db;}
+.search-item:last-child{border-bottom:none;}
+.search-item:active{background:#E6F1FB;}
+.search-item.sel{background:#E6F1FB;color:#0C447C;font-weight:500;}
+.act-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
+.atype-btn{padding:7px 4px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#666;cursor:pointer;text-align:center;font-family:inherit;}
+.atype-btn.sel{border-color:#1e3a5f;background:#E6F1FB;color:#1e3a5f;font-weight:500;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.result-btn{padding:8px 4px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#666;cursor:pointer;text-align:center;font-family:inherit;}
+.result-btn.sel{border-color:#1e3a5f;background:#E6F1FB;color:#1e3a5f;font-weight:500;}
+.memo-area{width:100%;padding:8px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;resize:none;height:68px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none;}
+.memo-area:focus{border-color:#1e3a5f;}
+.submit-btn{width:100%;padding:9px;font-size:12px;font-weight:500;background:#1e3a5f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;}
+.submit-btn:disabled{opacity:0.6;cursor:not-allowed;}
+
+/* ══ 소유주 상세 팝업 ══ */
+.popup-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:200;align-items:flex-end;justify-content:center;}
+.popup-overlay.show{display:flex;}
+.popup{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:400px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+.popup-header{background:#1e3a5f;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;}
+.popup-title{color:#fff;font-size:12px;font-weight:500;}
+.popup-close{color:#a0b8d0;font-size:20px;cursor:pointer;line-height:1;padding:0 4px;}
+.popup-tabs{display:flex;border-bottom:0.5px solid #d0d4db;background:#f5f7fa;}
+.ptab{flex:1;padding:8px 4px;font-size:11px;color:#666;text-align:center;cursor:pointer;border-bottom:2px solid transparent;}
+.ptab.on{color:#1e3a5f;border-bottom-color:#1e3a5f;font-weight:500;}
+.popup-body{padding:12px;overflow-y:auto;flex:1;}
+.pane{display:none;}.pane.on{display:block;}
+.section-lbl{font-size:10px;font-weight:500;color:#666;background:#f5f7fa;padding:4px 8px;border-radius:4px;margin:10px 0 6px;}
+.field-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid #d0d4db;font-size:12px;}
+.field-row:last-child{border-bottom:none;}
+.field-key{color:#666;flex-shrink:0;margin-right:8px;}
+.field-val{font-weight:500;text-align:right;word-break:break-all;}
+.consent-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #d0d4db;font-size:12px;}
+.consent-item:last-child{border-bottom:none;}
+.badge-o{background:#EAF3DE;color:#27500A;font-size:11px;padding:2px 10px;border-radius:4px;font-weight:500;}
+.badge-x{background:#FCEBEB;color:#791F1F;font-size:11px;padding:2px 10px;border-radius:4px;}
+.badge-dash{background:#F1EFE8;color:#888780;font-size:11px;padding:2px 10px;border-radius:4px;}
+.pay-total{background:#E6F1FB;border-radius:6px;padding:10px 12px;margin-bottom:12px;}
+.pay-total-lbl{font-size:10px;color:#0C447C;}.pay-total-val{font-size:18px;font-weight:500;color:#0C447C;margin-top:2px;}
+.pay-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #d0d4db;font-size:12px;}
+.pay-item:last-child{border-bottom:none;}
+.act-mini-item{padding:8px 0;border-bottom:0.5px solid #d0d4db;font-size:12px;}
+.act-mini-item:last-child{border-bottom:none;}
+.act-mini-top{display:flex;justify-content:space-between;margin-bottom:2px;}
+.act-mini-result{font-size:10px;padding:1px 7px;border-radius:4px;display:inline-block;margin-top:3px;}
+.empty-msg{text-align:center;padding:24px;font-size:11px;color:#888;}
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ════════ 로그인 ════════ -->
+<div id="screen-login">
+  <div class="login-inner">
+    <div class="login-header">
+      <div class="login-emblem">🏗</div>
+      <div class="login-title">백마마을 통합재건축</div>
+      <div class="login-sub">주민대표단 전용 앱</div>
+    </div>
+    <div class="login-card">
+      <div class="f-group">
+        <label class="f-label" for="inp-id">아이디</label>
+        <input class="f-input" id="inp-id" type="text" placeholder="아이디 입력" autocomplete="off">
+      </div>
+      <div class="f-group">
+        <label class="f-label" for="inp-pw">비밀번호</label>
+        <input class="f-input" id="inp-pw" type="password" placeholder="비밀번호 입력">
+      </div>
+      <button class="login-btn" id="login-btn">로그인</button>
+      <div class="login-err" id="login-err">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+    </div>
+    <div class="login-footer">계정 문의: 위원장 직통</div>
+  </div>
+</div>
+
+<!-- ════════ 메인 ════════ -->
+<div id="screen-main">
+  <div class="topbar">
+    <span class="t-main">백마마을 통합재건축</span>
+    <div class="t-user">
+      <span class="t-badge" id="tb-role">이사진</span>
+      <span class="t-name" id="tb-username">—</span>
+      <button class="t-logout" id="logout-btn">로그아웃</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab on" data-tab="0">종합</div>
+    <div class="tab" data-tab="1">소유주 조회</div>
+    <div class="tab" data-tab="2">활동 기록</div>
+  </div>
+  <div class="tab-content">
+
+    <!-- TAB 0: 종합 -->
+    <div class="tab-panel active" id="panel-0">
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-lbl">전체 소유주</div>
+          <div class="kpi-val" id="kpi-total">—</div>
+          <div class="kpi-sub" id="kpi-total-sub">로딩 중...</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-lbl2">동의율</span>
+            <select class="dd-sm" id="kpi-sel">
+              <option value="4">4차: 주민대표단</option>
+              <option value="3">3차: 선도지구</option>
+              <option value="2">2차: 컨설팅</option>
+              <option value="1">1차: 사전</option>
+            </select>
+          </div>
+          <div class="kpi-pct" id="kpi-pct">—</div>
+          <div class="kpi-sub2" id="kpi-sub">로딩 중...</div>
+          <div class="pct-track"><div class="pct-fill" id="kpi-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-title">동의서 동별 제출 현황</span>
+          <select class="dd-select" id="danji-sel-summary">
+            <option value="3">3단지</option><option value="4">4단지</option>
+            <option value="5">5단지</option><option value="6">6단지</option>
+            <option value="s">상가동</option>
+          </select>
+        </div>
+        <div class="section-sub" id="consent-label">로딩 중...</div>
+        <div id="bars-wrap"><div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">데이터 불러오는 중...</span></div></div>
+      </div>
+    </div>
+
+    <!-- TAB 1: 소유주 조회 -->
+    <div class="tab-panel" id="panel-1">
+      <div class="filter-row">
+        <select id="danji-sel-lookup">
+          <option value="3">3단지</option><option value="4">4단지</option>
+          <option value="5">5단지</option><option value="6">6단지</option>
+          <option value="s">상가동</option>
+        </select>
+        <select id="dong-sel"></select>
+      </div>
+      <div class="owner-row"><select id="owner-sel"><option value="">전체</option></select></div>
+      <div class="meta-row">
+        <span class="cnt" id="cnt-lbl">0건 표시</span>
+        <span class="hint">더블탭 → 상세보기</span>
+      </div>
+      <div class="cards" id="cards-wrap">
+        <div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">소유주 데이터 로딩 중...</span></div>
+      </div>
+    </div>
+
+    <!-- TAB 2: 활동 기록 -->
+    <div class="tab-panel" id="panel-2">
+      <div class="list-header">
+        <span class="list-lbl">활동 기록 전체</span>
+        <button class="new-btn" id="new-btn">+ 새로 작성</button>
+      </div>
+      <div id="log-list">
+        <div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">활동 기록 불러오는 중...</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════ 새 기록 작성 오버레이 ════════ -->
+<div class="form-overlay" id="form-overlay">
+  <div class="form-sheet">
+    <div class="form-title">새 활동 기록 <span class="form-close" id="form-close">×</span></div>
+    <div class="form-auto">
+      <div class="auto-item"><div class="auto-lbl">담당자</div><div class="auto-val" id="auto-name">—</div></div>
+      <div class="auto-item"><div class="auto-lbl">날짜</div><div class="auto-val" id="auto-date">—</div></div>
+    </div>
+    <div class="form-section">
+      <div class="form-lbl">활동 유형</div>
+      <div class="act-type-grid">
+        <button class="atype-btn" data-val="방문">방문</button>
+        <button class="atype-btn" data-val="전화">전화</button>
+        <button class="atype-btn" data-val="문자">문자</button>
+        <button class="atype-btn" data-val="카톡">카톡</button>
+        <button class="atype-btn" data-val="우편">우편</button>
+        <button class="atype-btn" data-val="기타">기타</button>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-lbl">소유주 검색</div>
+      <input class="owner-search" id="owner-search" placeholder="이름 또는 부동산ID 입력" autocomplete="off">
+      <div class="search-result" id="search-result"></div>
+    </div>
+    <div class="form-section">
+      <div class="form-lbl">결과</div>
+      <div class="result-grid">
+        <button class="result-btn" data-val="동의서 접수완료">동의서 접수완료</button>
+        <button class="result-btn" data-val="부재중">부재중</button>
+        <button class="result-btn" data-val="재방문 필요">재방문 필요</button>
+        <button class="result-btn" data-val="납부완료">납부완료</button>
+        <button class="result-btn" data-val="반대 의사">반대 의사</button>
+        <button class="result-btn" data-val="기타">기타</button>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-lbl">메모</div>
+      <textarea class="memo-area" id="memo-area" placeholder="특이사항을 입력하세요"></textarea>
+    </div>
+    <button class="submit-btn" id="submit-btn">작성 완료</button>
+  </div>
+</div>
+
+<!-- ════════ 소유주 상세 팝업 ════════ -->
+<div class="popup-overlay" id="popup-overlay">
+  <div class="popup">
+    <div class="popup-header">
+      <span class="popup-title" id="popup-title">—</span>
+      <span class="popup-close" id="popup-close">×</span>
+    </div>
+    <div class="popup-tabs">
+      <div class="ptab on" data-tab="p1">기본정보</div>
+      <div class="ptab" data-tab="p2">동의서</div>
+      <div class="ptab" data-tab="p3">납부</div>
+      <div class="ptab" data-tab="p4">활동기록</div>
+    </div>
+    <div class="popup-body">
+      <div class="pane on" id="pane-p1">
+        <div class="section-lbl">소유 부동산</div>
+        <div class="field-row"><span class="field-key">부동산 ID</span><span class="field-val" id="d-pid">—</span></div>
+        <div class="field-row"><span class="field-key">동/호</span><span class="field-val" id="d-loc">—</span></div>
+        <div class="field-row"><span class="field-key">전유면적</span><span class="field-val" id="d-area">—</span></div>
+        <div class="field-row"><span class="field-key">대지지분</span><span class="field-val" id="d-land">—</span></div>
+        <div class="section-lbl">소유주</div>
+        <div class="field-row"><span class="field-key">이름</span><span class="field-val" id="d-name">—</span></div>
+        <div class="field-row"><span class="field-key">전화번호</span><span class="field-val" id="d-tel">—</span></div>
+        <div class="field-row"><span class="field-key">거주구분</span><span class="field-val" id="d-res">—</span></div>
+        <div class="field-row"><span class="field-key">소유형태</span><span class="field-val" id="d-otype">—</span></div>
+      </div>
+      <div class="pane" id="pane-p2">
+        <div id="popup-consent-list"><div class="loading-wrap"><div class="spinner"></div></div></div>
+      </div>
+      <div class="pane" id="pane-p3">
+        <div class="pay-total">
+          <div class="pay-total-lbl">총 납부액</div>
+          <div class="pay-total-val" id="d-pay-total">—</div>
+        </div>
+        <div id="popup-pay-list"></div>
+      </div>
+      <div class="pane" id="pane-p4">
+        <div id="popup-act-list"><div class="loading-wrap"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════
+   SUPABASE 설정
+═══════════════════════════════ */
+const SB_URL  = 'https://ywzjvpajcoopjxhwubqd.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3emp2cGFqY29vcGp4aHd1YnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNzY3NjUsImV4cCI6MjA5MTY1Mjc2NX0.WMklwqmpNEsVOn5KikQCeW97SDXFTDGUfEWfEVU06r4';
+
+const HEADERS = {
+  'apikey': SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY,
+  'Content-Type': 'application/json'
+};
+
+async function sbGet(path){
+  const r = await fetch(SB_URL + '/rest/v1/' + path, {headers: HEADERS});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPost(path, body){
+  const r = await fetch(SB_URL + '/rest/v1/' + path, {
+    method:'POST', headers:{...HEADERS,'Prefer':'return=representation'}, body:JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+/* ═══════════════════════════════
+   로그인
+═══════════════════════════════ */
+let currentUser = null;
+
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('inp-pw').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doLogin(){
+  const id = document.getElementById('inp-id').value.trim();
+  const pw = document.getElementById('inp-pw').value.trim();
+  if(!id || !pw) return;
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = '확인 중...';
+  try {
+    // app_users 테이블에서 인증
+    const rows = await sbGet(`app_users?username=eq.${encodeURIComponent(id)}&password=eq.${encodeURIComponent(pw)}&is_active=eq.true&select=*`);
+    if(rows.length === 0){
+      document.getElementById('login-err').classList.add('show');
+    } else {
+      document.getElementById('login-err').classList.remove('show');
+      currentUser = rows[0];
+      enterApp();
+    }
+  } catch(e){
+    document.getElementById('login-err').textContent = '서버 연결 오류: ' + e.message;
+    document.getElementById('login-err').classList.add('show');
+  }
+  btn.disabled = false; btn.textContent = '로그인';
+}
+
+function enterApp(){
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-main').style.display = 'flex';
+  document.getElementById('screen-main').style.flexDirection = 'column';
+  document.getElementById('tb-username').textContent = currentUser.name;
+  document.getElementById('tb-role').textContent = currentUser.role;
+  document.getElementById('auto-name').textContent = currentUser.name;
+  const today = new Date();
+  document.getElementById('auto-date').textContent =
+    today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  // 데이터 로드
+  loadSummaryData();
+  initLookup();
+  loadActivities();
+}
+
+document.getElementById('logout-btn').addEventListener('click', ()=>{
+  currentUser = null;
+  document.getElementById('inp-id').value='';
+  document.getElementById('inp-pw').value='';
+  document.getElementById('screen-main').style.display='none';
+  document.getElementById('screen-login').style.display='flex';
+});
+
+/* ═══════════════════════════════
+   탭 전환
+═══════════════════════════════ */
+document.querySelectorAll('.tabs .tab').forEach(tab=>{
+  tab.addEventListener('click',function(){
+    document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    this.classList.add('on');
+    document.getElementById('panel-'+this.dataset.tab).classList.add('active');
+  });
+});
+
+/* ═══════════════════════════════
+   TAB 0: 종합 — Supabase에서 계산
+═══════════════════════════════ */
+const CONSENT_NAMES = {1:'1차: 사전동의서',2:'2차: 컨설팅동의서',3:'3차: 선도지구동의서',4:'4차: 주민대표단동의서'};
+const DANJI_NAMES   = {3:'3단지',4:'4단지',5:'5단지',6:'6단지',s:'상가동'};
+
+// 동 → 단지 분류 함수
+function getDanjiKey(dong){
+  const commercialPrefixes = ['3SS','4SS','4DS','5SS','5DS','6SS','BMS','SCS'];
+  if(commercialPrefixes.some(p => dong && dong.startsWith(p))) return 's';
+  const num = parseInt(dong);
+  if(num>=301&&num<=399) return 3;
+  if(num>=401&&num<=499) return 4;
+  if(num>=501&&num<=599) return 5;
+  if(num>=601&&num<=699) return 6;
+  return 's';
+}
+
+let summaryAllOwners = [];
+let summaryAllConsent = [];
+let currentSummaryConsent = 4;
+let currentSummaryDanji = 3;
+
+async function loadSummaryData(){
+  try {
+    // 소유주 수
+    const ownerRows = await sbGet('owners?select=부동산id,동&limit=5000');
+    summaryAllOwners = ownerRows;
+    const total = ownerRows.length;
+    // 아파트/상가 분류
+    const apt = ownerRows.filter(o=>{ const d=getDanjiKey(o['동']); return d!=='s'; }).length;
+    const com = total - apt;
+    document.getElementById('kpi-total').textContent = total.toLocaleString()+'명';
+    document.getElementById('kpi-total-sub').textContent = `아파트 ${apt.toLocaleString()} · 상가 ${com.toLocaleString()}`;
+
+    // 동의서 전체
+    const consentRows = await sbGet('consent_records?select=부동산id,차수,상태&limit=20000');
+    summaryAllConsent = consentRows;
+
+    renderKpi(currentSummaryConsent);
+    renderBars();
+  } catch(e){
+    document.getElementById('kpi-total').textContent = '오류';
+    document.getElementById('bars-wrap').innerHTML = '<div class="empty-msg">데이터 로드 실패: '+e.message+'</div>';
+  }
+}
+
+function renderKpi(차수){
+  const consentOfRound = summaryAllConsent.filter(c=>c['차수']===차수);
+  const submitted = consentOfRound.filter(c=>c['상태']==='제출').length;
+  const total = summaryAllOwners.length || 1;
+  const pct = (submitted/total*100).toFixed(1);
+  document.getElementById('kpi-pct').textContent = pct+'%';
+  document.getElementById('kpi-sub').textContent = submitted.toLocaleString()+'명 제출';
+  document.getElementById('kpi-bar').style.width = pct+'%';
+}
+
+function renderBars(){
+  const danjiKey = currentSummaryDanji;
+  const 차수 = currentSummaryConsent;
+
+  // 해당 단지 소유주 목록
+  const danjiOwners = summaryAllOwners.filter(o=>getDanjiKey(o['동'])===danjiKey);
+  // 동별 그룹
+  const dongMap = {};
+  danjiOwners.forEach(o=>{
+    const d = o['동']||'미확인';
+    if(!dongMap[d]) dongMap[d]={total:0,submit:0,oppose:0};
+    dongMap[d].total++;
+  });
+  // 동의서 현황
+  const consentOfRound = summaryAllConsent.filter(c=>c['차수']===차수);
+  consentOfRound.forEach(c=>{
+    // 해당 소유주 동 찾기
+    const owner = summaryAllOwners.find(o=>o['부동산id']===c['부동산id']);
+    if(!owner) return;
+    const d = owner['동']||'미확인';
+    if(!dongMap[d]) return;
+    if(c['상태']==='제출') dongMap[d].submit++;
+    else if(c['상태']==='반대') dongMap[d].oppose++;
+  });
+
+  document.getElementById('consent-label').textContent = CONSENT_NAMES[차수]+' · '+DANJI_NAMES[danjiKey];
+
+  const dongs = Object.keys(dongMap).sort();
+  if(dongs.length===0){
+    document.getElementById('bars-wrap').innerHTML='<div class="empty-msg">데이터 없음</div>';
+    return;
+  }
+  document.getElementById('bars-wrap').innerHTML = dongs.map(d=>{
+    const r = dongMap[d];
+    const sp = r.total>0?(r.submit/r.total*100).toFixed(1):0;
+    const op = r.total>0?(r.oppose/r.total*100).toFixed(1):0;
+    const none = r.total - r.submit - r.oppose;
+    return `<div class="bar-block">
+      <div class="bar-header"><span class="bar-dong">${d}</span><span class="bar-pct">${sp}%</span></div>
+      <div class="bar-track"><div class="bs" style="width:${sp}%"></div><div class="bo" style="width:${op}%"></div><div class="bn"></div></div>
+      <div class="bar-ft">
+        <span class="leg"><div class="dot dy"></div>제출 ${r.submit}</span>
+        <span class="leg"><div class="dot dn"></div>반대 ${r.oppose}</span>
+        <span class="leg"><div class="dot dg"></div>무응답 ${none}</span>
+      </div></div>`;
+  }).join('');
+}
+
+document.getElementById('kpi-sel').addEventListener('change',function(){
+  currentSummaryConsent=parseInt(this.value); renderKpi(currentSummaryConsent); renderBars();
+});
+document.getElementById('danji-sel-summary').addEventListener('change',function(){
+  currentSummaryDanji=isNaN(parseInt(this.value))?this.value:parseInt(this.value); renderBars();
+});
+
+/* ═══════════════════════════════
+   TAB 1: 소유주 조회
+═══════════════════════════════ */
+const DANJI_DONGS = {
+  3:[{id:'301동'},{id:'302동'},{id:'303동'},{id:'304동'},{id:'305동'},{id:'306동'},{id:'307동'},{id:'308동'},{id:'309동'},{id:'310동'},{id:'3SS',label:'3단지 상가'}],
+  4:[{id:'401동'},{id:'402동'},{id:'403동'},{id:'4SS',label:'4단지 상가'},{id:'4DS',label:'4단지 분산상가'}],
+  5:[{id:'501동'},{id:'502동'},{id:'503동'},{id:'5SS',label:'5단지 상가'},{id:'5DS',label:'5단지 분산상가'}],
+  6:[{id:'601동'},{id:'602동'},{id:'6SS',label:'6단지 상가'}],
+  s:[{id:'BMS',label:'백마상가'},{id:'SCS',label:'설촌상가'}],
+};
+
+let currentDongId = '301동';
+let currentDongOwners = [];
+let allOwnersCache = null; // 검색용 전체 캐시
+
+function getDongLabel(d){ return d.label||d.id; }
+
+function updateDongSel(key){
+  const dongs = DANJI_DONGS[key]||DANJI_DONGS[3];
+  const sel = document.getElementById('dong-sel');
+  sel.innerHTML = dongs.map(d=>`<option value="${d.id}">${getDongLabel(d)}</option>`).join('');
+  return dongs[0].id;
+}
+
+async function initLookup(){
+  updateDongSel(3);
+  await loadDong('301동');
+}
+
+async function loadDong(dongId){
+  currentDongId = dongId;
+  document.getElementById('cards-wrap').innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
+
+  try {
+    // 동 필터링: 아파트동은 '동' 컬럼, 상가는 부동산id prefix로
+    let ownerRows;
+    const isCommercial = isNaN(parseInt(dongId));
+    if(isCommercial){
+      ownerRows = await sbGet(`owners?부동산id=like.${encodeURIComponent(dongId+'%')}&select=*&order=부동산id.asc&limit=500`);
+    } else {
+      ownerRows = await sbGet(`owners?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.asc&limit=500`);
+    }
+
+    // 해당 동 부동산ID 목록
+    const pids = ownerRows.map(o=>o['부동산id']).filter(Boolean);
+
+    // 동의서 4차수 한번에 조회
+    let consentMap = {};
+    if(pids.length>0){
+      const pidFilter = pids.map(p=>`부동산id.eq.${p}`).join(',');
+      const consentRows = await sbGet(`consent_records?or=(${encodeURIComponent(pidFilter)})&select=부동산id,차수,상태&limit=2000`);
+      consentRows.forEach(c=>{
+        if(!consentMap[c['부동산id']]) consentMap[c['부동산id']]={};
+        consentMap[c['부동산id']][c['차수']] = c['상태'];
+      });
+    }
+
+    // 납부 합계
+    let payMap = {};
+    if(pids.length>0){
+      const pidFilter = pids.map(p=>`부동산id.eq.${p}`).join(',');
+      const payRows = await sbGet(`payments?or=(${encodeURIComponent(pidFilter)})&select=부동산id,금액&limit=2000`);
+      payRows.forEach(p=>{
+        payMap[p['부동산id']] = (payMap[p['부동산id']]||0) + (p['금액']||0);
+      });
+    }
+
+    currentDongOwners = ownerRows;
+
+    // owner-sel 업데이트
+    const sel = document.getElementById('owner-sel');
+    sel.innerHTML = '<option value="">전체 ('+ownerRows.length+'명)</option>'
+      + ownerRows.map(o=>`<option value="${o['부동산id']}">${o['부동산id']} ${o['이름']||''}</option>`).join('');
+
+    renderOwnerCards(ownerRows, consentMap, payMap);
+  } catch(e){
+    document.getElementById('cards-wrap').innerHTML = '<div class="empty-msg">오류: '+e.message+'</div>';
+  }
+}
+
+function consentVal(map, pid, 차수){
+  const v = map[pid]?.[차수];
+  if(v==='제출') return `<span class="c-val c-y">O</span>`;
+  if(v==='반대') return `<span class="c-val c-n">X</span>`;
+  return `<span class="c-val c-dash">-</span>`;
+}
+
+function renderOwnerCards(owners, consentMap, payMap){
+  document.getElementById('cnt-lbl').textContent = owners.length+'건 표시';
+  if(owners.length===0){
+    document.getElementById('cards-wrap').innerHTML='<div class="empty-msg">해당 동에 소유주가 없습니다.</div>';
+    return;
+  }
+  // 공동명의 그룹핑 (같은 호수)
+  const grouped = {};
+  owners.forEach(o=>{
+    const key = o['부동산id'];
+    if(!grouped[key]) grouped[key]=[];
+    grouped[key].push(o);
+  });
+
+  const html = Object.entries(grouped).map(([pid, list])=>{
+    const isJoint = list.length>1;
+    const rep = list[0];
+    const payTotal = payMap[pid]||0;
+    const payY = payTotal>0;
+    const jointBadge = isJoint?`<span class="badge-joint">공동명의 ${list.length}명</span>`:'';
+    const resClass = rep['거주구분']==='거주'?'tag-res-y':'tag-res-n';
+    const resText = rep['거주구분']||'미확인';
+    const payText = payY?(payTotal.toLocaleString()+'원'):'미납';
+    const payClass = payY?'info-pay-y':'info-pay-n';
+    return `<div class="ocard"
+      data-pid="${pid}"
+      data-name="${rep['이름']||'—'}"
+      data-tel="${rep['전화번호']||'—'}"
+      data-res="${resText}"
+      data-pay="${payText}"
+      data-area="${rep['전유면적']||'—'}"
+      data-land="${rep['대지크기']||'—'}"
+      data-otype="${rep['소유형태']||'—'}"
+      data-loc="${rep['동']||''} ${rep['호']||''}">
+      <div class="ho-line">${pid}${jointBadge}</div>
+      <div class="info-row"><span class="info-name">${rep['이름']||'—'}</span><span class="${payClass}">${payText}</span></div>
+      <div class="info-row2">${rep['전화번호']?`<span class="info-tel">${rep['전화번호']}</span>`:'<span class="info-notel">연락처 없음</span>'}<span class="tag ${resClass}">${resText}</span></div>
+      <div class="divider"></div>
+      <div class="consent-grid">
+        <div class="c-col"><span class="c-lbl">사전</span>${consentVal(consentMap,pid,1)}</div>
+        <div class="c-col"><span class="c-lbl">컨설팅</span>${consentVal(consentMap,pid,2)}</div>
+        <div class="c-col"><span class="c-lbl">선도지구</span>${consentVal(consentMap,pid,3)}</div>
+        <div class="c-col"><span class="c-lbl">주민대표단</span>${consentVal(consentMap,pid,4)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('cards-wrap').innerHTML = html;
+  bindDoubleClick();
+}
+
+// 더블탭
+function bindDoubleClick(){
+  document.querySelectorAll('.ocard').forEach(card=>{
+    let clicks=0,timer=null;
+    card.addEventListener('click',()=>{
+      clicks++;
+      if(clicks===1){timer=setTimeout(()=>{clicks=0;},400);}
+      else if(clicks>=2){clearTimeout(timer);clicks=0;openPopup(card);}
+    });
+  });
+}
+
+async function openPopup(card){
+  const pid = card.dataset.pid;
+  document.getElementById('popup-title').textContent = pid;
+  document.getElementById('d-pid').textContent  = pid;
+  document.getElementById('d-name').textContent = card.dataset.name;
+  document.getElementById('d-tel').textContent  = card.dataset.tel;
+  document.getElementById('d-res').textContent  = card.dataset.res;
+  document.getElementById('d-area').textContent = card.dataset.area;
+  document.getElementById('d-land').textContent = card.dataset.land;
+  document.getElementById('d-otype').textContent= card.dataset.otype;
+  document.getElementById('d-loc').textContent  = card.dataset.loc;
+  document.querySelectorAll('.ptab').forEach((t,i)=>t.classList.toggle('on',i===0));
+  document.querySelectorAll('.pane').forEach((p,i)=>p.classList.toggle('on',i===0));
+  document.getElementById('popup-overlay').classList.add('show');
+
+  // 동의서 로드
+  document.getElementById('popup-consent-list').innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
+  document.getElementById('popup-pay-list').innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
+  document.getElementById('popup-act-list').innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  try {
+    const [consentRows, payRows, actRows] = await Promise.all([
+      sbGet(`consent_records?부동산id=eq.${encodeURIComponent(pid)}&select=차수,상태`),
+      sbGet(`payments?부동산id=eq.${encodeURIComponent(pid)}&select=회차,납부일자,금액&order=회차.asc`),
+      sbGet(`activities?부동산id=eq.${encodeURIComponent(pid)}&select=*&order=created_at.desc&limit=20`),
+    ]);
+
+    // 동의서
+    const cmap = {};
+    consentRows.forEach(c=>{ cmap[c['차수']]=c['상태']; });
+    document.getElementById('popup-consent-list').innerHTML = [1,2,3,4].map(n=>{
+      const s = cmap[n]||'미제출';
+      const cls = s==='제출'?'badge-o':s==='반대'?'badge-x':'badge-dash';
+      return `<div class="consent-item"><span>${CONSENT_NAMES[n]}</span><span class="${cls}">${s}</span></div>`;
+    }).join('');
+
+    // 납부
+    const total = payRows.reduce((s,p)=>s+(p['금액']||0),0);
+    document.getElementById('d-pay-total').textContent = total.toLocaleString()+'원';
+    document.getElementById('popup-pay-list').innerHTML = payRows.length===0
+      ? '<div class="empty-msg">납부 내역 없음</div>'
+      : payRows.map(p=>`<div class="pay-item"><span>${p['회차']}회차</span><span style="font-size:11px;color:#666">${p['납부일자']||''}</span><span style="color:#27500A;font-weight:500">${(p['금액']||0).toLocaleString()}원</span></div>`).join('');
+
+    // 활동기록
+    const resClassMap={'동의서 접수완료':'res-accept','부재중':'res-absent','재방문 필요':'res-revisit','납부완료':'res-done','반대 의사':'res-revisit','기타':'res-other'};
+    document.getElementById('popup-act-list').innerHTML = actRows.length===0
+      ? '<div class="empty-msg">활동 기록 없음</div>'
+      : actRows.map(a=>{
+          const dt = a['created_at']?a['created_at'].slice(0,10):'—';
+          const rc = resClassMap[a['결과']]||'res-other';
+          return `<div class="act-mini-item">
+            <div class="act-mini-top"><span style="font-weight:500">${a['활동유형']||''} — ${a['담당자']||''}</span><span style="font-size:10px;color:#888">${dt}</span></div>
+            ${a['메모']?`<div style="font-size:11px;color:#666;margin-bottom:3px">${a['메모']}</div>`:''}
+            <span class="act-mini-result ${rc}">${a['결과']||''}</span>
+          </div>`;
+        }).join('');
+  } catch(e){
+    document.getElementById('popup-consent-list').innerHTML='<div class="empty-msg">오류: '+e.message+'</div>';
+  }
+}
+
+document.querySelectorAll('.ptab').forEach(tab=>{
+  tab.addEventListener('click',function(){
+    document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+    this.classList.add('on');
+    document.getElementById('pane-'+this.dataset.tab).classList.add('on');
+  });
+});
+document.getElementById('popup-close').addEventListener('click',()=>document.getElementById('popup-overlay').classList.remove('show'));
+
+document.getElementById('danji-sel-lookup').addEventListener('change',function(){
+  const key=isNaN(parseInt(this.value))?this.value:parseInt(this.value);
+  loadDong(updateDongSel(key));
+});
+document.getElementById('dong-sel').addEventListener('change',function(){ loadDong(this.value); });
+document.getElementById('owner-sel').addEventListener('change',function(){
+  const v=this.value;
+  if(!v){ renderOwnerCards(currentDongOwners,{},{}); loadDong(currentDongId); return; }
+  const found=currentDongOwners.filter(o=>o['부동산id']===v);
+  if(found.length) loadDong(currentDongId).then(()=>{
+    // 필터 적용은 loadDong 후 별도로
+  });
+  // 단순하게 해당 1건만 표시
+  const el=document.querySelector(`.ocard[data-pid="${v}"]`);
+  if(el){ document.getElementById('cnt-lbl').textContent='1건 표시'; document.getElementById('cards-wrap').innerHTML=el.outerHTML; bindDoubleClick(); }
+});
+
+/* ═══════════════════════════════
+   TAB 2: 활동 기록
+═══════════════════════════════ */
+async function loadActivities(){
+  try {
+    const rows = await sbGet('activities?select=*&order=created_at.desc&limit=100');
+    renderActivities(rows);
+  } catch(e){
+    document.getElementById('log-list').innerHTML='<div class="empty-msg">오류: '+e.message+'</div>';
+  }
+}
+
+const resClassMap={'동의서 접수완료':'res-accept','부재중':'res-absent','재방문 필요':'res-revisit','납부완료':'res-done','반대 의사':'res-revisit','기타':'res-other'};
+
+function renderActivities(rows){
+  if(rows.length===0){
+    document.getElementById('log-list').innerHTML='<div class="empty-msg">활동 기록이 없습니다.</div>';
+    return;
+  }
+  // 날짜별 그룹
+  const groups={};
+  rows.forEach(r=>{
+    const dt=r['created_at']?r['created_at'].slice(0,10):'—';
+    if(!groups[dt]) groups[dt]=[];
+    groups[dt].push(r);
+  });
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('log-list').innerHTML = Object.entries(groups).map(([dt,list])=>`
+    <div class="date-group">
+      <div class="date-lbl">${dt}${dt===today?' 오늘':''}</div>
+      ${list.map(a=>{
+        const t=a['created_at']?a['created_at'].slice(11,16):'';
+        const rc=resClassMap[a['결과']]||'res-other';
+        return `<div class="act-card">
+          <div class="act-top"><div class="act-left"><span class="act-type-badge">${a['활동유형']||'—'}</span><span class="act-who">${a['담당자']||'—'}</span></div><span class="act-time">${t}</span></div>
+          <div class="act-target">${a['소유주명']||'—'} <span>${a['부동산id']||'—'}</span></div>
+          ${a['메모']?`<div class="act-content">${a['메모']}</div>`:''}
+          <span class="act-result ${rc}">${a['결과']||'—'}</span>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+// 소유주 검색 (이름/부동산ID)
+let searchTimer=null;
+document.getElementById('owner-search').addEventListener('input',async function(){
+  const q=this.value.trim();
+  if(!q){ document.getElementById('search-result').classList.remove('show'); return; }
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(async()=>{
+    try {
+      // 이름 or 부동산id로 검색
+      const rows = await sbGet(`owners?or=(이름.ilike.*${encodeURIComponent(q)}*,부동산id.ilike.*${encodeURIComponent(q)}*)&select=부동산id,이름,동,호&limit=20`);
+      const sr=document.getElementById('search-result');
+      if(rows.length===0){sr.innerHTML='<div class="search-item" style="color:#888">검색 결과 없음</div>';sr.classList.add('show');return;}
+      sr.innerHTML=rows.map(r=>`<div class="search-item" data-name="${r['이름']||'—'}" data-pid="${r['부동산id']}">${r['이름']||'—'} · ${r['부동산id']}</div>`).join('');
+      sr.classList.add('show');
+      sr.querySelectorAll('.search-item[data-pid]').forEach(item=>{
+        item.addEventListener('click',function(){
+          document.querySelectorAll('.search-item').forEach(i=>i.classList.remove('sel'));
+          this.classList.add('sel');
+          selectedOwner={name:this.dataset.name,pid:this.dataset.pid};
+          document.getElementById('owner-search').value=this.dataset.name+' · '+this.dataset.pid;
+          document.getElementById('search-result').classList.remove('show');
+        });
+      });
+    } catch(e){}
+  },300);
+});
+
+// 새 기록 작성
+let selectedResult='', selectedActType='', selectedOwner=null;
+document.getElementById('new-btn').addEventListener('click',()=>{
+  selectedResult=''; selectedActType=''; selectedOwner=null;
+  document.querySelectorAll('.result-btn,.atype-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('owner-search').value='';
+  document.getElementById('memo-area').value='';
+  document.getElementById('search-result').classList.remove('show');
+  document.getElementById('form-overlay').classList.add('show');
+});
+document.getElementById('form-close').addEventListener('click',()=>document.getElementById('form-overlay').classList.remove('show'));
+document.querySelectorAll('.atype-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.atype-btn').forEach(b=>b.classList.remove('sel'));
+    this.classList.add('sel'); selectedActType=this.dataset.val;
+  });
+});
+document.querySelectorAll('.result-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.result-btn').forEach(b=>b.classList.remove('sel'));
+    this.classList.add('sel'); selectedResult=this.dataset.val;
+  });
+});
+
+document.getElementById('submit-btn').addEventListener('click',async()=>{
+  if(!selectedActType){alert('활동 유형을 선택해주세요.');return;}
+  if(!selectedOwner){alert('소유주를 선택해주세요.');return;}
+  if(!selectedResult){alert('결과를 선택해주세요.');return;}
+  const memo=document.getElementById('memo-area').value.trim();
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true; btn.textContent='저장 중...';
+  try {
+    await sbPost('activities',{
+      부동산id: selectedOwner.pid,
+      소유주명: selectedOwner.name,
+      담당자: currentUser.name,
+      활동유형: selectedActType,
+      결과: selectedResult,
+      메모: memo,
+    });
+    document.getElementById('form-overlay').classList.remove('show');
+    loadActivities(); // 목록 새로고침
+  } catch(e){
+    alert('저장 실패: '+e.message);
+  }
+  btn.disabled=false; btn.textContent='작성 완료';
+});
+</script>
+</body>
+</html>
