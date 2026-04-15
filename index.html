@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>백마마을 통합재건축 — 주민대표단</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px;color:#1a1a1a;background:#e8eaef;display:flex;justify-content:center;min-height:100vh;}
@@ -203,6 +204,26 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .act-mini-top{display:flex;justify-content:space-between;margin-bottom:2px;}
 .act-mini-result{font-size:10px;padding:1px 7px;border-radius:4px;display:inline-block;margin-top:3px;}
 .empty-msg{text-align:center;padding:24px;font-size:11px;color:#888;}
+
+/* ══ 비밀번호 변경 모달 ══ */
+.pw-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:none;align-items:center;justify-content:center;}
+.pw-modal-overlay.show{display:flex;}
+.pw-modal{background:#fff;border-radius:16px;padding:24px 20px;width:calc(100% - 48px);max-width:340px;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
+.pw-modal-title{font-size:15px;font-weight:700;color:#1e3a5f;margin-bottom:4px;}
+.pw-modal-sub{font-size:11px;color:#888;margin-bottom:18px;}
+.pw-field{margin-bottom:12px;}
+.pw-field label{font-size:10px;font-weight:500;color:#4a5568;text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:5px;}
+.pw-field input{width:100%;padding:11px 13px;font-size:13px;font-family:inherit;border:1.5px solid #d8dfe8;border-radius:10px;outline:none;transition:border-color .2s;}
+.pw-field input:focus{border-color:#2d5a8e;box-shadow:0 0 0 3px rgba(45,90,142,0.10);}
+.pw-msg{display:none;margin-bottom:12px;padding:9px 12px;border-radius:8px;font-size:11px;text-align:center;}
+.pw-msg.err{display:block;background:#FDECEA;color:#c62828;}
+.pw-msg.ok{display:block;background:#E8F5E9;color:#2E7D32;}
+.pw-btns{display:flex;gap:8px;margin-top:4px;}
+.pw-btn-cancel{flex:1;padding:11px;font-size:13px;font-family:inherit;background:#f0f2f5;color:#555;border:none;border-radius:10px;cursor:pointer;}
+.pw-btn-save{flex:2;padding:11px;font-size:13px;font-weight:700;font-family:inherit;background:linear-gradient(135deg,#1e3a5f,#2d5a8e);color:#fff;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 12px rgba(30,58,95,0.25);}
+.pw-btn-save:disabled{opacity:0.6;cursor:not-allowed;}
+/* 상단바 비번변경 버튼 */
+.t-pwbtn{font-size:10px;color:rgba(255,255,255,0.45);padding:3px 8px;border:1px solid rgba(255,255,255,0.15);border-radius:5px;background:transparent;cursor:pointer;font-family:inherit;margin-right:4px;}
 </style>
 </head>
 <body>
@@ -218,15 +239,15 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
     </div>
     <div class="login-card">
       <div class="f-group">
-        <label class="f-label" for="inp-id">아이디</label>
-        <input class="f-input" id="inp-id" type="text" placeholder="아이디 입력" autocomplete="off">
+        <label class="f-label" for="inp-id">이메일</label>
+        <input class="f-input" id="inp-id" type="email" placeholder="예: chair@baekma.com" autocomplete="email" inputmode="email">
       </div>
       <div class="f-group">
         <label class="f-label" for="inp-pw">비밀번호</label>
         <input class="f-input" id="inp-pw" type="password" placeholder="비밀번호 입력">
       </div>
       <button class="login-btn" id="login-btn">로그인</button>
-      <div class="login-err" id="login-err">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+      <div class="login-err" id="login-err">이메일 또는 비밀번호가 올바르지 않습니다.</div>
     </div>
     <div class="login-footer">계정 문의: 위원장 직통</div>
   </div>
@@ -239,6 +260,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
     <div class="t-user">
       <span class="t-badge" id="tb-role">이사진</span>
       <span class="t-name" id="tb-username">—</span>
+      <button class="t-pwbtn" id="pw-change-btn">비번변경</button>
       <button class="t-logout" id="logout-btn">로그아웃</button>
     </div>
   </div>
@@ -413,14 +435,29 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 const SB_URL  = 'https://ywzjvpajcoopjxhwubqd.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3emp2cGFqY29vcGp4aHd1YnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNzY3NjUsImV4cCI6MjA5MTY1Mjc2NX0.WMklwqmpNEsVOn5KikQCeW97SDXFTDGUfEWfEVU06r4';
 
-const HEADERS = {
-  'apikey': SB_KEY,
-  'Authorization': 'Bearer ' + SB_KEY,
-  'Content-Type': 'application/json'
-};
+// ── Supabase Auth SDK 초기화 ──
+const _supabase = supabase.createClient(SB_URL, SB_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false
+  }
+});
+
+// JWT 토큰을 Auth SDK에서 가져오는 헬퍼
+async function getAuthHeaders() {
+  const { data: { session } } = await _supabase.auth.getSession();
+  const token = session ? session.access_token : SB_KEY;
+  return {
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + token,
+    'Content-Type': 'application/json'
+  };
+}
 
 async function sbGet(path){
-  const r = await fetch(SB_URL + '/rest/v1/' + path, {headers: HEADERS});
+  const headers = await getAuthHeaders();
+  const r = await fetch(SB_URL + '/rest/v1/' + path, {headers});
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
@@ -437,15 +474,16 @@ async function sbGetAll(path, pageSize=1000){
   return all;
 }
 async function sbPost(path, body){
+  const headers = await getAuthHeaders();
   const r = await fetch(SB_URL + '/rest/v1/' + path, {
-    method:'POST', headers:{...HEADERS,'Prefer':'return=representation'}, body:JSON.stringify(body)
+    method:'POST', headers:{...headers,'Prefer':'return=representation'}, body:JSON.stringify(body)
   });
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
 
 /* ═══════════════════════════════
-   로그인
+   로그인 (Supabase Auth)
 ═══════════════════════════════ */
 let currentUser = null;
 
@@ -453,24 +491,33 @@ document.getElementById('login-btn').addEventListener('click', doLogin);
 document.getElementById('inp-pw').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
 async function doLogin(){
-  const id = document.getElementById('inp-id').value.trim();
-  const pw = document.getElementById('inp-pw').value.trim();
-  if(!id || !pw) return;
+  const email = document.getElementById('inp-id').value.trim();
+  const pw    = document.getElementById('inp-pw').value.trim();
+  if(!email || !pw) return;
   const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-err');
   btn.disabled = true; btn.textContent = '확인 중...';
   try {
-    // app_users 테이블에서 인증
-    const rows = await sbGet(`app_users?username=eq.${encodeURIComponent(id)}&password=eq.${encodeURIComponent(pw)}&is_active=eq.true&select=*`);
-    if(rows.length === 0){
-      document.getElementById('login-err').classList.add('show');
-    } else {
-      document.getElementById('login-err').classList.remove('show');
-      currentUser = rows[0];
-      enterApp();
+    // ── Supabase Auth 로그인 ──
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pw });
+    if(error || !data.user){
+      errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      errEl.classList.add('show');
+      btn.disabled = false; btn.textContent = '로그인';
+      return;
     }
+    // Auth 성공 → app_users 에서 이름/역할 조회
+    let name = email.split('@')[0], role = '이사진';
+    try {
+      const rows = await sbGet(`app_users?auth_uid=eq.${data.user.id}&select=name,role`);
+      if(rows.length > 0){ name = rows[0].name; role = rows[0].role || '이사진'; }
+    } catch(_){}
+    currentUser = { name, role, email };
+    errEl.classList.remove('show');
+    enterApp();
   } catch(e){
-    document.getElementById('login-err').textContent = '서버 연결 오류: ' + e.message;
-    document.getElementById('login-err').classList.add('show');
+    errEl.textContent = '서버 연결 오류: ' + e.message;
+    errEl.classList.add('show');
   }
   btn.disabled = false; btn.textContent = '로그인';
 }
@@ -485,19 +532,34 @@ function enterApp(){
   const today = new Date();
   document.getElementById('auto-date').textContent =
     today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-  // 데이터 로드
   loadSummaryData();
   initLookup();
   loadActivities();
 }
 
-document.getElementById('logout-btn').addEventListener('click', ()=>{
+document.getElementById('logout-btn').addEventListener('click', async ()=>{
+  await _supabase.auth.signOut();
   currentUser = null;
   document.getElementById('inp-id').value='';
   document.getElementById('inp-pw').value='';
   document.getElementById('screen-main').style.display='none';
   document.getElementById('screen-login').style.display='flex';
 });
+
+// ── 페이지 로드 시 기존 세션 자동 복원 ──
+(async function restoreSession(){
+  try {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if(!session) return;
+    let name = session.user.email.split('@')[0], role = '이사진';
+    try {
+      const rows = await sbGet(`app_users?auth_uid=eq.${session.user.id}&select=name,role`);
+      if(rows.length > 0){ name = rows[0].name; role = rows[0].role || '이사진'; }
+    } catch(_){}
+    currentUser = { name, role, email: session.user.email };
+    enterApp();
+  } catch(_){}
+})();
 
 /* ═══════════════════════════════
    탭 전환
@@ -1052,6 +1114,102 @@ document.getElementById('submit-btn').addEventListener('click',async()=>{
   }
   btn.disabled=false; btn.textContent='작성 완료';
 });
+
+/* ═══════════════════════════════
+   비밀번호 변경
+═══════════════════════════════ */
+document.getElementById('pw-change-btn').addEventListener('click', () => {
+  // 필드 초기화
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+  const msg = document.getElementById('pw-msg');
+  msg.className = 'pw-msg';
+  msg.textContent = '';
+  document.getElementById('pw-modal-sub').textContent =
+    (currentUser ? currentUser.name + '님, ' : '') + '변경할 새 비밀번호를 입력하세요';
+  document.getElementById('pw-modal-overlay').classList.add('show');
+  setTimeout(() => document.getElementById('pw-new').focus(), 100);
+});
+
+document.getElementById('pw-btn-cancel').addEventListener('click', closePwModal);
+document.getElementById('pw-modal-overlay').addEventListener('click', e => {
+  if(e.target === document.getElementById('pw-modal-overlay')) closePwModal();
+});
+document.getElementById('pw-confirm').addEventListener('keydown', e => {
+  if(e.key === 'Enter') doChangePw();
+});
+document.getElementById('pw-btn-save').addEventListener('click', doChangePw);
+
+function closePwModal(){
+  document.getElementById('pw-modal-overlay').classList.remove('show');
+}
+
+async function doChangePw(){
+  const newPw  = document.getElementById('pw-new').value;
+  const confirm = document.getElementById('pw-confirm').value;
+  const msg    = document.getElementById('pw-msg');
+  const btn    = document.getElementById('pw-btn-save');
+
+  // 유효성 검사
+  if(!newPw || !confirm){
+    msg.className = 'pw-msg err';
+    msg.textContent = '비밀번호를 모두 입력해주세요.';
+    return;
+  }
+  if(newPw.length < 8){
+    msg.className = 'pw-msg err';
+    msg.textContent = '비밀번호는 8자 이상이어야 합니다.';
+    return;
+  }
+  if(newPw !== confirm){
+    msg.className = 'pw-msg err';
+    msg.textContent = '비밀번호가 일치하지 않습니다.';
+    document.getElementById('pw-confirm').value = '';
+    document.getElementById('pw-confirm').focus();
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = '변경 중...';
+  msg.className = 'pw-msg'; msg.textContent = '';
+
+  try {
+    const { error } = await _supabase.auth.updateUser({ password: newPw });
+    if(error){
+      msg.className = 'pw-msg err';
+      msg.textContent = '변경 실패: ' + error.message;
+    } else {
+      msg.className = 'pw-msg ok';
+      msg.textContent = '✅ 비밀번호가 변경되었습니다!';
+      // 2초 후 자동 닫기
+      setTimeout(() => closePwModal(), 2000);
+    }
+  } catch(e){
+    msg.className = 'pw-msg err';
+    msg.textContent = '오류: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '변경하기';
+}
 </script>
+
+<!-- ════════ 비밀번호 변경 모달 ════════ -->
+<div class="pw-modal-overlay" id="pw-modal-overlay">
+  <div class="pw-modal">
+    <div class="pw-modal-title">🔒 비밀번호 변경</div>
+    <div class="pw-modal-sub" id="pw-modal-sub">변경할 새 비밀번호를 입력하세요</div>
+    <div class="pw-field">
+      <label for="pw-new">새 비밀번호</label>
+      <input type="password" id="pw-new" placeholder="8자 이상 입력">
+    </div>
+    <div class="pw-field">
+      <label for="pw-confirm">새 비밀번호 확인</label>
+      <input type="password" id="pw-confirm" placeholder="한 번 더 입력">
+    </div>
+    <div class="pw-msg" id="pw-msg"></div>
+    <div class="pw-btns">
+      <button class="pw-btn-cancel" id="pw-btn-cancel">취소</button>
+      <button class="pw-btn-save" id="pw-btn-save">변경하기</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
