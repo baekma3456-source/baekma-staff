@@ -1131,18 +1131,21 @@ document.getElementById('pw-change-btn').addEventListener('click', () => {
   setTimeout(() => document.getElementById('pw-new').focus(), 100);
 });
 
-document.getElementById('pw-btn-cancel').addEventListener('click', closePwModal);
-document.getElementById('pw-modal-overlay').addEventListener('click', e => {
-  if(e.target === document.getElementById('pw-modal-overlay')) closePwModal();
-});
-document.getElementById('pw-confirm').addEventListener('keydown', e => {
-  if(e.key === 'Enter') doChangePw();
-});
-document.getElementById('pw-btn-save').addEventListener('click', doChangePw);
-
 function closePwModal(){
   document.getElementById('pw-modal-overlay').classList.remove('show');
 }
+
+// 모달 관련 이벤트는 DOMContentLoaded 후 등록
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('pw-btn-cancel').addEventListener('click', closePwModal);
+  document.getElementById('pw-modal-overlay').addEventListener('click', function(e){
+    if(e.target === this) closePwModal();
+  });
+  document.getElementById('pw-confirm').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') doChangePw();
+  });
+  document.getElementById('pw-btn-save').addEventListener('click', doChangePw);
+});
 
 async function doChangePw(){
   const newPw  = document.getElementById('pw-new').value;
