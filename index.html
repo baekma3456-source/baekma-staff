@@ -444,10 +444,23 @@ const _supabase = supabase.createClient(SB_URL, SB_KEY, {
   }
 });
 
+// XSS 방지용 이스케이프 함수
+function esc(str) {
+  if(str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // JWT 토큰을 Auth SDK에서 가져오는 헬퍼
 async function getAuthHeaders() {
   const { data: { session } } = await _supabase.auth.getSession();
-  const token = session ? session.access_token : SB_KEY;
+  const token = session ? session.access_token : null;
+  // 비로그인 상태면 null 반환 → API 호출 차단
+  if(!token) throw new Error('로그인이 필요합니다.');
   return {
     'apikey': SB_KEY,
     'Authorization': 'Bearer ' + token,
@@ -852,29 +865,29 @@ function renderOwnerCards(owners, consentMap, payMap){
         const resClass2 = person['거주구분']==='거주'?'tag-res-y':'tag-res-n';
         const resText2 = person['거주구분']||'미확인';
         return `<div class="joint-person">
-          <div class="jp-name">${person['이름']||'—'}</div>
-          ${person['전화번호']?`<div class="jp-tel">${person['전화번호']}</div>`:'<div class="jp-notel">연락처 없음</div>'}
-          <span class="tag ${resClass2} jp-res">${resText2}</span>
+          <div class="jp-name">${esc(person['이름'])||'—'}</div>
+          ${person['전화번호']?`<div class="jp-tel">${esc(person['전화번호'])}</div>`:'<div class="jp-notel">연락처 없음</div>'}
+          <span class="tag ${resClass2} jp-res">${esc(resText2)}</span>
         </div>`;
       }).join('')}</div>`;
     } else {
       const resClass = rep['거주구분']==='거주'?'tag-res-y':'tag-res-n';
       const resText = rep['거주구분']||'미확인';
       ownerHtml = `
-        <div class="info-row"><span class="info-name">${rep['이름']||'—'}</span><span class="${payClass}">${payText}</span></div>
-        <div class="info-row2">${rep['전화번호']?`<span class="info-tel">${rep['전화번호']}</span>`:'<span class="info-notel">연락처 없음</span>'}<span class="tag ${resClass}">${resText}</span></div>`;
+        <div class="info-row"><span class="info-name">${esc(rep['이름'])||'—'}</span><span class="${payClass}">${payText}</span></div>
+        <div class="info-row2">${rep['전화번호']?`<span class="info-tel">${esc(rep['전화번호'])}</span>`:'<span class="info-notel">연락처 없음</span>'}<span class="tag ${resClass}">${esc(resText)}</span></div>`;
     }
 
     return `<div class="ocard"
       data-pid="${pid}"
-      data-name="${list.map(p=>p['이름']||'—').join(' / ')}"
-      data-tel="${rep['전화번호']||'—'}"
-      data-res="${rep['거주구분']||'미확인'}"
+      data-name="${esc(list.map(p=>p['이름']||'—').join(' / '))}"
+      data-tel="${esc(rep['전화번호']||'—')}"
+      data-res="${esc(rep['거주구분']||'미확인')}"
       data-pay="${payText}"
-      data-area="${rep['전유면적']||'—'}"
-      data-land="${rep['대지크기']||'—'}"
-      data-otype="${rep['소유형태']||'—'}"
-      data-loc="${rep['동']?rep['동']+'동':''} ${rep['호']?rep['호']+'호':''}">
+      data-area="${esc(rep['전유면적']||'—')}"
+      data-land="${esc(rep['대지크기']||'—')}"
+      data-otype="${esc(rep['소유형태']||'—')}"
+      data-loc="${esc((rep['동']?rep['동']+'동':'')+' '+(rep['호']?rep['호']+'호':''))}">
       <div class="ho-line">${pid}${isJoint?`<span class="badge-joint">공동명의 ${list.length}명</span>`:''}<span class="${payClass}" style="float:right">${isJoint?payText:''}</span></div>
       ${ownerHtml}
       <div class="divider"></div>
@@ -960,9 +973,9 @@ async function openPopup(card){
           const dt = a['created_at']?a['created_at'].slice(0,10):'—';
           const rc = resClassMap[a['결과']]||'res-other';
           return `<div class="act-mini-item">
-            <div class="act-mini-top"><span style="font-weight:500">${a['활동유형']||''} — ${a['담당자']||''}</span><span style="font-size:10px;color:#888">${dt}</span></div>
-            ${a['메모']?`<div style="font-size:11px;color:#666;margin-bottom:3px">${a['메모']}</div>`:''}
-            <span class="act-mini-result ${rc}">${a['결과']||''}</span>
+            <div class="act-mini-top"><span style="font-weight:500">${esc(a['활동유형'])||''} — ${esc(a['담당자'])||''}</span><span style="font-size:10px;color:#888">${esc(dt)}</span></div>
+            ${a['메모']?`<div style="font-size:11px;color:#666;margin-bottom:3px">${esc(a['메모'])}</div>`:''}
+            <span class="act-mini-result ${rc}">${esc(a['결과'])||''}</span>
           </div>`;
         }).join('');
   } catch(e){
@@ -1031,10 +1044,10 @@ function renderActivities(rows){
         const t=a['created_at']?a['created_at'].slice(11,16):'';
         const rc=resClassMap[a['결과']]||'res-other';
         return `<div class="act-card">
-          <div class="act-top"><div class="act-left"><span class="act-type-badge">${a['활동유형']||'—'}</span><span class="act-who">${a['담당자']||'—'}</span></div><span class="act-time">${t}</span></div>
-          <div class="act-target">${a['소유주명']||'—'} <span>${a['부동산id']||'—'}</span></div>
-          ${a['메모']?`<div class="act-content">${a['메모']}</div>`:''}
-          <span class="act-result ${rc}">${a['결과']||'—'}</span>
+          <div class="act-top"><div class="act-left"><span class="act-type-badge">${esc(a['활동유형'])||'—'}</span><span class="act-who">${esc(a['담당자'])||'—'}</span></div><span class="act-time">${esc(t)}</span></div>
+          <div class="act-target">${esc(a['소유주명'])||'—'} <span>${esc(a['부동산id'])||'—'}</span></div>
+          ${a['메모']?`<div class="act-content">${esc(a['메모'])}</div>`:''}
+          <span class="act-result ${rc}">${esc(a['결과'])||'—'}</span>
         </div>`;
       }).join('')}
     </div>`).join('');
@@ -1052,7 +1065,7 @@ document.getElementById('owner-search').addEventListener('input',async function(
       const rows = await sbGet(`owners?or=(이름.ilike.*${encodeURIComponent(q)}*,부동산id.ilike.*${encodeURIComponent(q)}*)&select=부동산id,이름,동,호&limit=20`);
       const sr=document.getElementById('search-result');
       if(rows.length===0){sr.innerHTML='<div class="search-item" style="color:#888">검색 결과 없음</div>';sr.classList.add('show');return;}
-      sr.innerHTML=rows.map(r=>`<div class="search-item" data-name="${r['이름']||'—'}" data-pid="${r['부동산id']}">${r['이름']||'—'} · ${r['부동산id']}</div>`).join('');
+      sr.innerHTML=rows.map(r=>`<div class="search-item" data-name="${esc(r['이름']||'—')}" data-pid="${esc(r['부동산id'])}">${esc(r['이름']||'—')} · ${esc(r['부동산id'])}</div>`).join('');
       sr.classList.add('show');
       sr.querySelectorAll('.search-item[data-pid]').forEach(item=>{
         item.addEventListener('click',function(){
