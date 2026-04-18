@@ -40,6 +40,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .t-badge{background:#2d5a8e;color:#B5D4F4;font-size:10px;padding:1px 7px;border-radius:10px;}
 .t-name{color:#a0b8d0;font-size:11px;}
 .t-logout{font-size:10px;color:rgba(255,255,255,0.45);padding:3px 8px;border:1px solid rgba(255,255,255,0.15);border-radius:5px;background:transparent;cursor:pointer;font-family:inherit;}
+.t-pwbtn{font-size:10px;color:rgba(255,255,255,0.45);padding:3px 8px;border:1px solid rgba(255,255,255,0.15);border-radius:5px;background:transparent;cursor:pointer;font-family:inherit;margin-right:4px;}
 .tabs{background:#e8eaef;display:flex;border-bottom:0.5px solid #d0d4db;flex-shrink:0;}
 .tab{padding:9px 0;font-size:11px;color:#666;flex:1;text-align:center;cursor:pointer;}
 .tab.on{background:#1e3a5f;color:#fff;font-weight:500;}
@@ -92,7 +93,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .ocard:active{background:#f5f8ff;}
 .ho-line{font-size:11px;color:#666;margin-bottom:6px;}
 .badge-joint{font-size:10px;padding:1px 7px;border-radius:10px;background:#FAEEDA;color:#633806;margin-left:6px;}
-.badge-multi{font-size:10px;padding:1px 7px;border-radius:10px;background:#E6F1FB;color:#0C447C;margin-left:6px;}
 .info-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
 .info-name{font-size:13px;font-weight:500;}
 .info-pay-y{font-size:11px;font-weight:500;color:#27500A;}
@@ -108,7 +108,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .c-lbl{font-size:9px;color:#666;font-weight:500;line-height:1.3;}
 .c-val{font-size:12px;font-weight:500;padding:2px 0;border-radius:3px;width:100%;text-align:center;}
 .c-y{background:#EAF3DE;color:#27500A;}.c-n{background:#FCEBEB;color:#791F1F;}.c-dash{background:#F1EFE8;color:#888780;}
-/* 공동명의 가로 스크롤 */
 .joint-scroll{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;margin:0 -2px 4px;padding-bottom:2px;}
 .joint-scroll::-webkit-scrollbar{height:3px;}
 .joint-scroll::-webkit-scrollbar-thumb{background:#d0d4db;border-radius:2px;}
@@ -139,7 +138,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .res-done{background:#EAF3DE;color:#27500A;}
 .res-revisit{background:#FAEEDA;color:#633806;}
 .res-absent{background:#F1EFE8;color:#888780;}
-.res-accept{background:#EAF3DE;color:#27500A;}
 .res-other{background:#F1EFE8;color:#888780;}
 
 /* ══ 작성 폼 오버레이 ══ */
@@ -163,7 +161,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .search-item:active{background:#E6F1FB;}
 .search-item.sel{background:#E6F1FB;color:#0C447C;font-weight:500;}
 .act-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
-.act-type-grid .atype-btn:last-child:nth-child(3n-1){grid-column:span 1;}
 .act-type-grid .atype-btn:nth-child(4){grid-column:1;}
 .act-type-grid .atype-btn:nth-child(5){grid-column:2/span 2;}
 .atype-btn{padding:7px 4px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#666;cursor:pointer;text-align:center;font-family:inherit;}
@@ -226,8 +223,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .pw-btn-cancel{flex:1;padding:11px;font-size:13px;font-family:inherit;background:#f0f2f5;color:#555;border:none;border-radius:10px;cursor:pointer;}
 .pw-btn-save{flex:2;padding:11px;font-size:13px;font-weight:700;font-family:inherit;background:linear-gradient(135deg,#1e3a5f,#2d5a8e);color:#fff;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 12px rgba(30,58,95,0.25);}
 .pw-btn-save:disabled{opacity:0.6;cursor:not-allowed;}
-/* 상단바 비번변경 버튼 */
-.t-pwbtn{font-size:10px;color:rgba(255,255,255,0.45);padding:3px 8px;border:1px solid rgba(255,255,255,0.15);border-radius:5px;background:transparent;cursor:pointer;font-family:inherit;margin-right:4px;}
 </style>
 </head>
 <body>
@@ -279,7 +274,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
     <div class="tab-panel active" id="panel-0">
       <div class="kpi-row">
         <div class="kpi-card">
-          <div class="kpi-lbl">전체 소유주</div>
+          <div class="kpi-lbl">전체 부동산</div>
           <div class="kpi-val" id="kpi-total">—</div>
           <div class="kpi-sub" id="kpi-total-sub">로딩 중...</div>
         </div>
@@ -407,11 +402,9 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
         <div class="field-row"><span class="field-key">동/호</span><span class="field-val" id="d-loc">—</span></div>
         <div class="field-row"><span class="field-key">전유면적</span><span class="field-val" id="d-area">—</span></div>
         <div class="field-row"><span class="field-key">대지지분</span><span class="field-val" id="d-land">—</span></div>
-        <div class="section-lbl">소유주</div>
-        <div class="field-row"><span class="field-key">이름</span><span class="field-val" id="d-name">—</span></div>
-        <div class="field-row"><span class="field-key">전화번호</span><span class="field-val" id="d-tel">—</span></div>
         <div class="field-row"><span class="field-key">거주구분</span><span class="field-val" id="d-res">—</span></div>
-        <div class="field-row"><span class="field-key">소유형태</span><span class="field-val" id="d-otype">—</span></div>
+        <div class="section-lbl">소유주</div>
+        <div id="d-owners-list"></div>
       </div>
       <div class="pane" id="pane-p2">
         <div id="popup-consent-list"><div class="loading-wrap"><div class="spinner"></div></div></div>
@@ -430,58 +423,64 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
   </div>
 </div>
 
+<!-- ════════ 비밀번호 변경 모달 ════════ -->
+<div class="pw-modal-overlay" id="pw-modal-overlay">
+  <div class="pw-modal">
+    <div class="pw-modal-title">🔒 비밀번호 변경</div>
+    <div class="pw-modal-sub" id="pw-modal-sub">변경할 새 비밀번호를 입력하세요</div>
+    <div class="pw-field">
+      <label for="pw-new">새 비밀번호</label>
+      <input type="password" id="pw-new" placeholder="8자 이상 입력">
+    </div>
+    <div class="pw-field">
+      <label for="pw-confirm">새 비밀번호 확인</label>
+      <input type="password" id="pw-confirm" placeholder="한 번 더 입력">
+    </div>
+    <div class="pw-msg" id="pw-msg"></div>
+    <div class="pw-btns">
+      <button class="pw-btn-cancel" id="pw-btn-cancel">취소</button>
+      <button class="pw-btn-save" id="pw-btn-save">변경하기</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ═══════════════════════════════
    SUPABASE 설정
 ═══════════════════════════════ */
-const SB_URL  = 'https://ywzjvpajcoopjxhwubqd.supabase.co';
-const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3emp2cGFqY29vcGp4aHd1YnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNzY3NjUsImV4cCI6MjA5MTY1Mjc2NX0.WMklwqmpNEsVOn5KikQCeW97SDXFTDGUfEWfEVU06r4';
+const SB_URL = 'https://ywzjvpajcoopjxhwubqd.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3emp2cGFqY29vcGp4aHd1YnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNzY3NjUsImV4cCI6MjA5MTY1Mjc2NX0.WMklwqmpNEsVOn5KikQCeW97SDXFTDGUfEWfEVU06r4';
 
-// ── Supabase Auth SDK 초기화 ──
 const _supabase = supabase.createClient(SB_URL, SB_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: false
-  }
+  auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:false }
 });
 
-// XSS 방지용 이스케이프 함수
-function esc(str) {
-  if(str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+function esc(str){
+  if(str===null||str===undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
 
-// JWT 토큰을 Auth SDK에서 가져오는 헬퍼
-async function getAuthHeaders() {
-  const { data: { session } } = await _supabase.auth.getSession();
-  const token = session ? session.access_token : null;
-  // 비로그인 상태면 null 반환 → API 호출 차단
-  if(!token) throw new Error('로그인이 필요합니다.');
+async function getAuthHeaders(){
+  const { data:{ session } } = await _supabase.auth.getSession();
+  if(!session) throw new Error('로그인이 필요합니다.');
   return {
     'apikey': SB_KEY,
-    'Authorization': 'Bearer ' + token,
+    'Authorization': 'Bearer ' + session.access_token,
     'Content-Type': 'application/json'
   };
 }
 
 async function sbGet(path){
   const headers = await getAuthHeaders();
-  const r = await fetch(SB_URL + '/rest/v1/' + path, {headers});
+  const r = await fetch(SB_URL+'/rest/v1/'+path, {headers});
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
-// 1000건 초과 데이터 페이지네이션으로 전부 가져오기
 async function sbGetAll(path, pageSize=1000){
   let all=[], offset=0;
   while(true){
-    const sep = path.includes('?') ? '&' : '?';
-    const rows = await sbGet(path + sep + 'limit='+pageSize+'&offset='+offset);
+    const sep = path.includes('?')?'&':'?';
+    const rows = await sbGet(path+sep+'limit='+pageSize+'&offset='+offset);
     all = all.concat(rows);
     if(rows.length < pageSize) break;
     offset += pageSize;
@@ -490,7 +489,7 @@ async function sbGetAll(path, pageSize=1000){
 }
 async function sbPost(path, body){
   const headers = await getAuthHeaders();
-  const r = await fetch(SB_URL + '/rest/v1/' + path, {
+  const r = await fetch(SB_URL+'/rest/v1/'+path, {
     method:'POST', headers:{...headers,'Prefer':'return=representation'}, body:JSON.stringify(body)
   });
   if(!r.ok) throw new Error(await r.text());
@@ -498,80 +497,79 @@ async function sbPost(path, body){
 }
 
 /* ═══════════════════════════════
-   로그인 (Supabase Auth)
+   로그인
 ═══════════════════════════════ */
 let currentUser = null;
 
 document.getElementById('login-btn').addEventListener('click', doLogin);
-document.getElementById('inp-pw').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('inp-pw').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 
 async function doLogin(){
   const email = document.getElementById('inp-id').value.trim();
   const pw    = document.getElementById('inp-pw').value.trim();
-  if(!email || !pw) return;
-  const btn = document.getElementById('login-btn');
-  const errEl = document.getElementById('login-err');
-  btn.disabled = true; btn.textContent = '확인 중...';
+  if(!email||!pw) return;
+  const btn=document.getElementById('login-btn');
+  const errEl=document.getElementById('login-err');
+  btn.disabled=true; btn.textContent='확인 중...';
   try {
-    // ── Supabase Auth 로그인 ──
-    const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pw });
-    if(error || !data.user){
-      errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password:pw });
+    if(error||!data.user){
+      errEl.textContent='이메일 또는 비밀번호가 올바르지 않습니다.';
       errEl.classList.add('show');
-      btn.disabled = false; btn.textContent = '로그인';
+      btn.disabled=false; btn.textContent='로그인';
       return;
     }
-    // Auth 성공 → user_profiles 에서 이름/역할 조회
-    let name = email.split('@')[0], role = '이사진';
+    // user_profiles에서 이름/역할 조회
+    let name=email.split('@')[0], role='이사진';
     try {
       const rows = await sbGet(`user_profiles?id=eq.${data.user.id}&select=이름,역할`);
-      if(rows.length > 0){ name = rows[0]['이름'] || name; role = rows[0]['역할'] || '이사진'; }
+      if(rows.length>0){ name=rows[0]['이름']||name; role=rows[0]['역할']||'이사진'; }
     } catch(_){}
-    currentUser = { name, role, email };
+    currentUser = { name, role, email, id:data.user.id };
     errEl.classList.remove('show');
     enterApp();
   } catch(e){
-    errEl.textContent = '서버 연결 오류: ' + e.message;
+    errEl.textContent='서버 연결 오류: '+e.message;
     errEl.classList.add('show');
   }
-  btn.disabled = false; btn.textContent = '로그인';
+  btn.disabled=false; btn.textContent='로그인';
 }
 
 function enterApp(){
-  document.getElementById('screen-login').style.display = 'none';
-  document.getElementById('screen-main').style.display = 'flex';
-  document.getElementById('screen-main').style.flexDirection = 'column';
-  document.getElementById('tb-username').textContent = currentUser.name;
-  document.getElementById('tb-role').textContent = currentUser.role;
-  document.getElementById('auto-name').textContent = currentUser.name;
-  const today = new Date();
-  document.getElementById('auto-date').textContent =
+  document.getElementById('screen-login').style.display='none';
+  document.getElementById('screen-main').style.display='flex';
+  document.getElementById('screen-main').style.flexDirection='column';
+  document.getElementById('tb-username').textContent=currentUser.name;
+  document.getElementById('tb-role').textContent=currentUser.role;
+  document.getElementById('auto-name').textContent=currentUser.name;
+  const today=new Date();
+  document.getElementById('auto-date').textContent=
     today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
   loadSummaryData();
   initLookup();
   loadActivities();
 }
 
-document.getElementById('logout-btn').addEventListener('click', async ()=>{
+document.getElementById('logout-btn').addEventListener('click', async()=>{
   await _supabase.auth.signOut();
-  currentUser = null;
+  currentUser=null;
   document.getElementById('inp-id').value='';
   document.getElementById('inp-pw').value='';
   document.getElementById('screen-main').style.display='none';
   document.getElementById('screen-login').style.display='flex';
 });
 
-// ── 페이지 로드 시 기존 세션 자동 복원 ──
+// 세션 자동 복원
 (async function restoreSession(){
   try {
-    const { data: { session } } = await _supabase.auth.getSession();
+    const { data:{ session } } = await _supabase.auth.getSession();
     if(!session) return;
-    let name = session.user.email.split('@')[0], role = '이사진';
+    let name=session.user.email.split('@')[0], role='이사진';
     try {
       const rows = await sbGet(`user_profiles?id=eq.${session.user.id}&select=이름,역할`);
-      if(rows.length > 0){ name = rows[0]['이름'] || name; role = rows[0]['역할'] || '이사진'; }
+      if(rows.length>0){ name=rows[0]['이름']||name; role=rows[0]['역할']||'이사진'; }
     } catch(_){}
-    currentUser = { name, role, email: session.user.email };
+    currentUser={ name, role, email:session.user.email, id:session.user.id };
     enterApp();
   } catch(_){}
 })();
@@ -589,142 +587,108 @@ document.querySelectorAll('.tabs .tab').forEach(tab=>{
 });
 
 /* ═══════════════════════════════
-   TAB 0: 종합 — Supabase에서 계산
+   TAB 0: 종합
+   - properties 테이블 기준 (부동산 단위)
+   - consent_records_new 기준 동의율
 ═══════════════════════════════ */
-const CONSENT_NAMES = {1:'1차: 사전동의서',2:'2차: 컨설팅동의서',3:'3차: 선도지구동의서',4:'4차: 주민대표단동의서'};
-const DANJI_NAMES   = {3:'3단지',4:'4단지',5:'5단지',6:'6단지',s:'상가동'};
+const CONSENT_NAMES={1:'1차: 사전동의서',2:'2차: 컨설팅동의서',3:'3차: 선도지구동의서',4:'4차: 주민대표단동의서'};
+const DANJI_NAMES={3:'3단지',4:'4단지',5:'5단지',6:'6단지',s:'상가동'};
 
-// 동 → 단지 분류 함수
-function getDanjiKey(dong){
-  if(!dong) return 's';
-  const commercialPrefixes = ['3SS','4SS','4DS','5SS','5DS','6SS','BMS','SCS'];
-  if(commercialPrefixes.some(p => dong.startsWith(p))) return 's';
-  const num = parseInt(dong);
-  if(num>=301&&num<=399) return 3;
-  if(num>=401&&num<=499) return 4;
-  if(num>=501&&num<=599) return 5;
-  if(num>=601&&num<=699) return 6;
+// 부동산ID → 단지 분류
+function getDanjiKey(pid){
+  if(!pid) return 's';
+  const commercialPrefixes=['3SS','4SS','4DS','5SS','5DS','6SS','BMS','SCS'];
+  if(commercialPrefixes.some(p=>pid.startsWith(p))) return 's';
+  const dongNum=parseInt(pid.split('-')[0]);
+  if(dongNum>=301&&dongNum<=399) return 3;
+  if(dongNum>=401&&dongNum<=499) return 4;
+  if(dongNum>=501&&dongNum<=599) return 5;
+  if(dongNum>=601&&dongNum<=699) return 6;
   return 's';
 }
 
-let summaryAllOwners = [];
-let currentSummaryConsent = 4;
-let currentSummaryDanji = 3;
+let allProperties=[];       // properties 전체
+let allConsentRecords=[];   // consent_records_new 전체
+let currentSummaryConsent=4;
+let currentSummaryDanji=3;
 
 async function loadSummaryData(){
   try {
-    // 소유주 수
-    const ownerRows = await sbGetAll('owners?select=연번,부동산id,동,사전,컨설팅,선도,주대단');
-    summaryAllOwners = ownerRows;
-    // 분모: 고유 연번 수
-    const uniqueYeonbeon = new Set(ownerRows.map(o=>o['연번']).filter(Boolean));
-    const total = uniqueYeonbeon.size;
-    // 아파트/상가 분류 (연번 기준 고유 카운트)
-    const yeonbeonDanjiMap = {};
-    ownerRows.forEach(o=>{
-      const yb = o['연번'];
-      if(!yb) return;
-      if(!yeonbeonDanjiMap[yb]) yeonbeonDanjiMap[yb] = getDanjiKey(o['동']);
-    });
-    const apt = Object.values(yeonbeonDanjiMap).filter(d=>d!=='s').length;
+    // properties 전체 (부동산 단위 — 동의율 분모)
+    allProperties = await sbGetAll('properties?select=부동산id,동');
+    const total = allProperties.length;
+    const apt = allProperties.filter(p=>getDanjiKey(p['부동산id'])!=='s').length;
     const com = total - apt;
-    document.getElementById('kpi-total').textContent = total.toLocaleString()+'연번';
+    document.getElementById('kpi-total').textContent = total.toLocaleString()+'건';
     document.getElementById('kpi-total-sub').textContent = `아파트 ${apt.toLocaleString()} · 상가 ${com.toLocaleString()}`;
+
+    // consent_records_new 전체 (동의서 현황)
+    allConsentRecords = await sbGetAll('consent_records_new?select=부동산id,차수,상태');
 
     renderKpi(currentSummaryConsent);
     renderBars();
   } catch(e){
-    document.getElementById('kpi-total').textContent = '오류';
-    document.getElementById('bars-wrap').innerHTML = '<div class="empty-msg">데이터 로드 실패: '+e.message+'</div>';
+    document.getElementById('kpi-total').textContent='오류';
+    document.getElementById('bars-wrap').innerHTML='<div class="empty-msg">데이터 로드 실패: '+e.message+'</div>';
   }
 }
 
-// 차수 번호 → owners 테이블 컬럼명
-const ROUND_COL = {1:'사전', 2:'컨설팅', 3:'선도', 4:'주대단'};
-
-// owners 행에서 해당 차수의 제출 여부
-function isSubmitted(owner, 차수){
-  const col = ROUND_COL[차수];
-  return col && owner[col]==='제출';
-}
-function isOppose(owner, 차수){
-  const col = ROUND_COL[차수];
-  return col && owner[col]==='반대';
-}
-
-// 연번별 동의 상태 계산 (owners 배열 기준)
-// 같은 연번 내 한 명이라도 제출이면 → 제출
-// 아무도 제출 안하고 반대가 있으면 → 반대
-// 그 외 → 미제출
-function calcYeonbeonStatus(owners, 차수){
-  const map = {}; // yb → 상태
-  owners.forEach(o=>{
-    const yb = o['연번'];
-    if(!yb) return;
-    if(!map[yb]) map[yb] = '미제출';
-    if(isSubmitted(o, 차수)) map[yb] = '제출';
-    else if(isOppose(o, 차수) && map[yb]!=='제출') map[yb] = '반대';
-  });
-  return map;
-}
-
+// 동의율 KPI: 부동산 단위 — 해당 차수에 '제출' 레코드가 있으면 제출
 function renderKpi(차수){
-  const ybMap = calcYeonbeonStatus(summaryAllOwners, 차수);
-  const total = Object.keys(ybMap).length || 1;
-  const submitted = Object.values(ybMap).filter(s=>s==='제출').length;
-  const pct = (submitted/total*100).toFixed(1);
-  document.getElementById('kpi-pct').textContent = pct+'%';
-  document.getElementById('kpi-sub').textContent = `${submitted.toLocaleString()} / ${total.toLocaleString()} 연번`;
-  document.getElementById('kpi-bar').style.width = pct+'%';
+  const total = allProperties.length || 1;
+  // 해당 차수에서 '제출' 상태인 부동산id 집합
+  const submitted = new Set(
+    allConsentRecords
+      .filter(r=>r['차수']===차수 && r['상태']==='제출')
+      .map(r=>r['부동산id'])
+  );
+  const cnt = submitted.size;
+  const pct = (cnt/total*100).toFixed(1);
+  document.getElementById('kpi-pct').textContent=pct+'%';
+  document.getElementById('kpi-sub').textContent=`${cnt.toLocaleString()} / ${total.toLocaleString()} 건`;
+  document.getElementById('kpi-bar').style.width=pct+'%';
 }
 
 function renderBars(){
-  const danjiKey = currentSummaryDanji;
-  const 차수 = currentSummaryConsent;
+  const danjiKey=currentSummaryDanji;
+  const 차수=currentSummaryConsent;
 
-  // 해당 단지 소유주 목록
-  const danjiOwners = summaryAllOwners.filter(o=>getDanjiKey(o['동'])===danjiKey);
+  // 해당 단지 부동산 목록
+  const danjiProps = allProperties.filter(p=>getDanjiKey(p['부동산id'])===danjiKey);
 
-  // ── 연번별 동 매핑 ──
-  const yeonbeonDongMap = {};
-  danjiOwners.forEach(o=>{
-    const yb = o['연번'];
-    if(!yb) return;
-    if(!yeonbeonDongMap[yb]) yeonbeonDongMap[yb] = o['동']||'미확인';
-  });
-
-  // 동별 그룹 — 분모는 고유 연번 수 기준
-  const dongMap = {};
-  Object.values(yeonbeonDongMap).forEach(d=>{
+  // 동별 집계 맵
+  const dongMap={};
+  danjiProps.forEach(p=>{
+    const d=p['동']||'미확인';
     if(!dongMap[d]) dongMap[d]={total:0,submit:0,oppose:0};
     dongMap[d].total++;
   });
 
-  // ── 연번별 제출 상태 계산 (owners 컬럼 기반) ──
-  const yeonbeonStatusMap = calcYeonbeonStatus(danjiOwners, 차수);
+  // 해당 차수 동의 현황
+  const submitSet=new Set(allConsentRecords.filter(r=>r['차수']===차수&&r['상태']==='제출').map(r=>r['부동산id']));
+  const opposeSet=new Set(allConsentRecords.filter(r=>r['차수']===차수&&r['상태']==='반대').map(r=>r['부동산id']));
 
-  // ── 동별 집계 ──
-  Object.entries(yeonbeonStatusMap).forEach(([yb, status])=>{
-    const d = yeonbeonDongMap[yb];
-    if(!d || !dongMap[d]) return;
-    if(status==='제출') dongMap[d].submit++;
-    else if(status==='반대') dongMap[d].oppose++;
+  danjiProps.forEach(p=>{
+    const d=p['동']||'미확인';
+    if(!dongMap[d]) return;
+    if(submitSet.has(p['부동산id'])) dongMap[d].submit++;
+    else if(opposeSet.has(p['부동산id'])) dongMap[d].oppose++;
   });
 
-  document.getElementById('consent-label').textContent = CONSENT_NAMES[차수]+' · '+DANJI_NAMES[danjiKey];
+  document.getElementById('consent-label').textContent=CONSENT_NAMES[차수]+' · '+DANJI_NAMES[danjiKey];
 
-  const dongs = Object.keys(dongMap).sort();
+  const dongs=Object.keys(dongMap).sort();
   if(dongs.length===0){
     document.getElementById('bars-wrap').innerHTML='<div class="empty-msg">데이터 없음</div>';
     return;
   }
-  document.getElementById('bars-wrap').innerHTML = dongs.map(d=>{
-    const r = dongMap[d];
-    const sp = r.total>0?(r.submit/r.total*100).toFixed(1):0;
-    const op = r.total>0?(r.oppose/r.total*100).toFixed(1):0;
-    const none = r.total - r.submit - r.oppose;
+  document.getElementById('bars-wrap').innerHTML=dongs.map(d=>{
+    const r=dongMap[d];
+    const sp=r.total>0?(r.submit/r.total*100).toFixed(1):0;
+    const op=r.total>0?(r.oppose/r.total*100).toFixed(1):0;
+    const none=r.total-r.submit-r.oppose;
     return `<div class="bar-block">
-      <div class="bar-header"><span class="bar-dong">${d}</span><span class="bar-pct">${sp}%</span></div>
+      <div class="bar-header"><span class="bar-dong">${esc(d)}</span><span class="bar-pct">${sp}%</span></div>
       <div class="bar-track"><div class="bs" style="width:${sp}%"></div><div class="bo" style="width:${op}%"></div><div class="bn"></div></div>
       <div class="bar-ft">
         <span class="leg"><div class="dot dy"></div>제출 ${r.submit}</span>
@@ -743,8 +707,12 @@ document.getElementById('danji-sel-summary').addEventListener('change',function(
 
 /* ═══════════════════════════════
    TAB 1: 소유주 조회
+   - properties 테이블로 부동산 목록
+   - owners_new + property_bungi로 소유주 연결
+   - consent_records_new로 동의서 현황
+   - payments_new로 납부 현황
 ═══════════════════════════════ */
-const DANJI_DONGS = {
+const DANJI_DONGS={
   3:[{id:'301',label:'301동'},{id:'302',label:'302동'},{id:'303',label:'303동'},{id:'304',label:'304동'},{id:'305',label:'305동'},{id:'306',label:'306동'},{id:'307',label:'307동'},{id:'308',label:'308동'},{id:'309',label:'309동'},{id:'310',label:'310동'}],
   4:[{id:'401',label:'401동'},{id:'402',label:'402동'},{id:'403',label:'403동'},{id:'404',label:'404동'},{id:'405',label:'405동'},{id:'406',label:'406동'},{id:'407',label:'407동'},{id:'408',label:'408동'},{id:'409',label:'409동'},{id:'410',label:'410동'},{id:'411',label:'411동'},{id:'412',label:'412동'}],
   5:[{id:'501',label:'501동'},{id:'502',label:'502동'},{id:'503',label:'503동'},{id:'504',label:'504동'},{id:'505',label:'505동'},{id:'506',label:'506동'},{id:'507',label:'507동'},{id:'508',label:'508동'},{id:'509',label:'509동'},{id:'510',label:'510동'},{id:'511',label:'511동'},{id:'512',label:'512동'},{id:'513',label:'513동'},{id:'514',label:'514동'},{id:'515',label:'515동'},{id:'516',label:'516동'}],
@@ -752,146 +720,134 @@ const DANJI_DONGS = {
   s:[{id:'3SS',label:'3단지 상가'},{id:'4SS',label:'4단지 상가'},{id:'4DS',label:'4단지 분산상가'},{id:'5SS',label:'5단지 상가'},{id:'5DS',label:'5단지 분산상가'},{id:'6SS',label:'6단지 상가'},{id:'BMS',label:'백마상가'},{id:'SCS',label:'설촌상가'}],
 };
 
-let currentDongId = '301동';
-let currentDongOwners = [];
-let allOwnersCache = null; // 검색용 전체 캐시
-
-function getDongLabel(d){ return d.label||(isNaN(parseInt(d.id))?d.id:d.id+'동'); }
+let currentDongId='301';
+let currentDongProps=[];
 
 function updateDongSel(key){
-  const dongs = DANJI_DONGS[key]||DANJI_DONGS[3];
-  const sel = document.getElementById('dong-sel');
-  sel.innerHTML = dongs.map(d=>`<option value="${d.id}">${getDongLabel(d)}</option>`).join('');
+  const dongs=DANJI_DONGS[key]||DANJI_DONGS[3];
+  const sel=document.getElementById('dong-sel');
+  sel.innerHTML=dongs.map(d=>`<option value="${d.id}">${d.label}</option>`).join('');
   return dongs[0].id;
 }
 
 async function initLookup(){
-  const firstId = updateDongSel(3);
+  const firstId=updateDongSel(3);
   await loadDong(firstId);
 }
 
 async function loadDong(dongId){
-  currentDongId = dongId;
-  document.getElementById('cards-wrap').innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
-
+  currentDongId=dongId;
+  document.getElementById('cards-wrap').innerHTML='<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
   try {
-    // 동 필터링: 아파트동은 '동' 컬럼, 상가는 부동산id prefix로
-    let ownerRows;
-    const isCommercial = !/^\d+$/.test(dongId);  // 순수 숫자만 아파트, 나머지(3SS, 4DS, BMS 등)는 상가
+    // 상가 여부 판별 (순수 숫자면 아파트동, 아니면 상가 prefix)
+    const isCommercial=!/^\d+$/.test(dongId);
+    let propRows;
     if(isCommercial){
-      // 상가: 부동산id prefix 필터
-      ownerRows = await sbGetAll(`owners?부동산id=ilike.${encodeURIComponent(dongId)}*&select=*&order=부동산id.asc`);
+      propRows=await sbGetAll(`properties?부동산id=ilike.${encodeURIComponent(dongId)}*&select=*&order=부동산id.asc`);
     } else {
-      ownerRows = await sbGetAll(`owners?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.desc`);
-      // 호수를 숫자 기준 내림차순 정렬 (DB의 문자열 정렬 보정)
-      ownerRows.sort((a,b)=>(parseInt(b['호'])||0)-(parseInt(a['호'])||0));
+      propRows=await sbGetAll(`properties?동=eq.${encodeURIComponent(dongId)}&select=*&order=호.asc`);
+      propRows.sort((a,b)=>(parseInt(a['호'])||0)-(parseInt(b['호'])||0));
+    }
+    currentDongProps=propRows;
+
+    if(propRows.length===0){
+      document.getElementById('cards-wrap').innerHTML='<div class="empty-msg">해당 동에 부동산이 없습니다.</div>';
+      document.getElementById('cnt-lbl').textContent='0건 표시';
+      return;
     }
 
-    // 해당 동 부동산ID 목록
-    const pids = ownerRows.map(o=>o['부동산id']).filter(Boolean);
+    const pids=propRows.map(p=>p['부동산id']).filter(Boolean);
 
-    // 동의서: owners 컬럼(사전/컨설팅/선도/주대단)에서 직접 구성
-    // 같은 부동산id에 여러 명(공동명의)이 있을 경우 한 명이라도 제출이면 제출
-    let consentMap = {};
-    ownerRows.forEach(o=>{
-      const pid = o['부동산id'];
-      if(!pid) return;
+    // 동의서: consent_records_new에서 해당 부동산들의 1~4차 조회
+    const pidFilter=pids.map(p=>`부동산id.eq.${p}`).join(',');
+    const consentRows=await sbGet(`consent_records_new?or=(${encodeURIComponent(pidFilter)})&select=부동산id,차수,상태&limit=5000`);
+
+    // 부동산별 차수별 동의상태 맵
+    const consentMap={};
+    consentRows.forEach(r=>{
+      const pid=r['부동산id'];
       if(!consentMap[pid]) consentMap[pid]={};
-      [1,2,3,4].forEach(round=>{
-        const col = {1:'사전',2:'컨설팅',3:'선도',4:'주대단'}[round];
-        const val = o[col];
-        const prev = consentMap[pid][round];
-        const status = val==='제출'?'제출':val==='반대'?'반대':'미제출';
-        if(!prev) consentMap[pid][round] = status;
-        else if(status==='제출') consentMap[pid][round] = '제출';
-        else if(status==='반대' && prev!=='제출') consentMap[pid][round] = '반대';
-      });
+      // 같은 부동산에 여러 소유주 레코드가 있을 수 있음 — 한 명이라도 제출이면 제출
+      const prev=consentMap[pid][r['차수']];
+      const status=r['상태']==='제출'?'제출':r['상태']==='반대'?'반대':'미제출';
+      if(!prev) consentMap[pid][r['차수']]=status;
+      else if(status==='제출') consentMap[pid][r['차수']]='제출';
+      else if(status==='반대'&&prev!=='제출') consentMap[pid][r['차수']]='반대';
     });
 
-    // 납부 합계
-    let payMap = {};
+    // 납부: payments_new — property_bungi → owner_bungi → payments_new 경로로 조회
+    const payMap={};
     if(pids.length>0){
-      const pidFilter = pids.map(p=>`부동산id.eq.${p}`).join(',');
-      const payRows = await sbGet(`payments?or=(${encodeURIComponent(pidFilter)})&select=부동산id,금액&limit=2000`);
-      payRows.forEach(p=>{
-        payMap[p['부동산id']] = (payMap[p['부동산id']]||0) + (p['금액']||0);
-      });
+      // 부동산id → bungi_id
+      const pidFilter2=pids.map(p=>`부동산id.eq.${p}`).join(',');
+      const pbAllRows=await sbGet(`property_bungi?or=(${encodeURIComponent(pidFilter2)})&select=부동산id,bungi_id`);
+      // bungi_id → owner_id
+      const allBungiIds=[...new Set(pbAllRows.map(r=>r['bungi_id']).filter(Boolean))];
+      if(allBungiIds.length>0){
+        const bungiFilter2=allBungiIds.map(id=>`bungi_id.eq.${id}`).join(',');
+        const obAllRows=await sbGet(`owner_bungi?or=(${encodeURIComponent(bungiFilter2)})&select=bungi_id,owner_id`);
+        // bungi_id → 부동산id 역매핑
+        const bungiToPid={};
+        pbAllRows.forEach(r=>{ bungiToPid[r['bungi_id']]=r['부동산id']; });
+        // owner_id → 부동산id 매핑
+        const ownerToPid={};
+        obAllRows.forEach(r=>{ ownerToPid[r['owner_id']]=bungiToPid[r['bungi_id']]; });
+        // payments_new 조회
+        const allOwnerIds=[...new Set(obAllRows.map(r=>r['owner_id']).filter(Boolean))];
+        if(allOwnerIds.length>0){
+          const ownerFilter2=allOwnerIds.map(id=>`owner_id.eq.${id}`).join(',');
+          const payRows=await sbGet(`payments_new?or=(${encodeURIComponent(ownerFilter2)})&select=owner_id,금액&limit=5000`);
+          payRows.forEach(p=>{
+            const pid2=ownerToPid[p['owner_id']];
+            if(pid2) payMap[pid2]=(payMap[pid2]||0)+(p['금액']||0);
+          });
+        }
+      }
     }
 
-    currentDongOwners = ownerRows;
-
     // owner-sel 업데이트
-    const sel = document.getElementById('owner-sel');
-    sel.innerHTML = '<option value="">전체 ('+ownerRows.length+'명)</option>'
-      + ownerRows.map(o=>`<option value="${o['부동산id']}">${o['부동산id']} ${o['이름']||''}</option>`).join('');
+    const sel=document.getElementById('owner-sel');
+    sel.innerHTML='<option value="">전체 ('+propRows.length+'건)</option>'
+      +propRows.map(p=>`<option value="${p['부동산id']}">${p['부동산id']} ${p['호']||''}호</option>`).join('');
 
-    renderOwnerCards(ownerRows, consentMap, payMap);
+    renderPropertyCards(propRows, consentMap, payMap);
   } catch(e){
-    document.getElementById('cards-wrap').innerHTML = '<div class="empty-msg">오류: '+e.message+'</div>';
+    document.getElementById('cards-wrap').innerHTML='<div class="empty-msg">오류: '+e.message+'</div>';
   }
 }
 
 function consentVal(map, pid, 차수){
-  const v = map[pid]?.[차수];
+  const v=map[pid]?.[차수];
   if(v==='제출') return `<span class="c-val c-y">O</span>`;
   if(v==='반대') return `<span class="c-val c-n">X</span>`;
   return `<span class="c-val c-dash">-</span>`;
 }
 
-function renderOwnerCards(owners, consentMap, payMap){
-  document.getElementById('cnt-lbl').textContent = owners.length+'건 표시';
-  if(owners.length===0){
-    document.getElementById('cards-wrap').innerHTML='<div class="empty-msg">해당 동에 소유주가 없습니다.</div>';
+function renderPropertyCards(props, consentMap, payMap){
+  document.getElementById('cnt-lbl').textContent=props.length+'건 표시';
+  if(props.length===0){
+    document.getElementById('cards-wrap').innerHTML='<div class="empty-msg">해당 동에 부동산이 없습니다.</div>';
     return;
   }
-  // 공동명의 그룹핑 (같은 호수)
-  const grouped = {};
-  owners.forEach(o=>{
-    const key = o['부동산id'];
-    if(!grouped[key]) grouped[key]=[];
-    grouped[key].push(o);
-  });
-
-  const html = Object.entries(grouped).map(([pid, list])=>{
-    const isJoint = list.length>1;
-    const rep = list[0];
-    const payTotal = payMap[pid]||0;
-    const payY = payTotal>0;
-    const payText = payY?(payTotal.toLocaleString()+'원'):'미납';
-    const payClass = payY?'info-pay-y':'info-pay-n';
-
-    // 소유주 표시: 공동명의면 가로스크롤, 단독이면 기존방식
-    let ownerHtml;
-    if(isJoint){
-      ownerHtml = `<div class="joint-scroll">${list.map(person=>{
-        const resClass2 = person['거주구분']==='거주'?'tag-res-y':'tag-res-n';
-        const resText2 = person['거주구분']||'미확인';
-        return `<div class="joint-person">
-          <div class="jp-name">${esc(person['이름'])||'—'}</div>
-          ${person['전화번호']?`<div class="jp-tel">${esc(person['전화번호'])}</div>`:'<div class="jp-notel">연락처 없음</div>'}
-          <span class="tag ${resClass2} jp-res">${esc(resText2)}</span>
-        </div>`;
-      }).join('')}</div>`;
-    } else {
-      const resClass = rep['거주구분']==='거주'?'tag-res-y':'tag-res-n';
-      const resText = rep['거주구분']||'미확인';
-      ownerHtml = `
-        <div class="info-row"><span class="info-name">${esc(rep['이름'])||'—'}</span><span class="${payClass}">${payText}</span></div>
-        <div class="info-row2">${rep['전화번호']?`<span class="info-tel">${esc(rep['전화번호'])}</span>`:'<span class="info-notel">연락처 없음</span>'}<span class="tag ${resClass}">${esc(resText)}</span></div>`;
-    }
-
+  const html=props.map(p=>{
+    const pid=p['부동산id'];
+    const resClass=p['거주구분']==='거주'?'tag-res-y':'tag-res-n';
+    const resText=p['거주구분']||'미확인';
+    const payTotal=payMap[pid]||0;
+    const payY=payTotal>0;
+    const payText=payY?(payTotal.toLocaleString()+'원'):'미납';
+    const payClass=payY?'info-pay-y':'info-pay-n';
     return `<div class="ocard"
-      data-pid="${pid}"
-      data-name="${esc(list.map(p=>p['이름']||'—').join(' / '))}"
-      data-tel="${esc(rep['전화번호']||'—')}"
-      data-res="${esc(rep['거주구분']||'미확인')}"
-      data-pay="${payText}"
-      data-area="${esc(rep['전유면적']||'—')}"
-      data-land="${esc(rep['대지크기']||'—')}"
-      data-otype="${esc(rep['소유형태']||'—')}"
-      data-loc="${esc((rep['동']?rep['동']+'동':'')+' '+(rep['호']?rep['호']+'호':''))}">
-      <div class="ho-line">${pid}${isJoint?`<span class="badge-joint">공동명의 ${list.length}명</span>`:''}<span class="${payClass}" style="float:right">${isJoint?payText:''}</span></div>
-      ${ownerHtml}
+      data-pid="${esc(pid)}"
+      data-loc="${esc((p['동']?p['동']+'동 ':'')+( p['호']?p['호']+'호':''))}"
+      data-area="${esc(p['전유면적']||'—')}"
+      data-land="${esc(p['지분별_토지']||'—')}"
+      data-res="${esc(resText)}">
+      <div class="ho-line">${esc(pid)} <span class="tag ${resClass}" style="float:right">${esc(resText)}</span></div>
+      <div class="info-row">
+        <span class="info-name">${p['동']?esc(p['동'])+'동 ':''} ${p['호']?esc(p['호'])+'호':''}</span>
+        <span class="${payClass}">${payText}</span>
+      </div>
       <div class="divider"></div>
       <div class="consent-grid">
         <div class="c-col"><span class="c-lbl">사전</span>${consentVal(consentMap,pid,1)}</div>
@@ -901,7 +857,7 @@ function renderOwnerCards(owners, consentMap, payMap){
       </div>
     </div>`;
   }).join('');
-  document.getElementById('cards-wrap').innerHTML = html;
+  document.getElementById('cards-wrap').innerHTML=html;
   bindDoubleClick();
 }
 
@@ -918,66 +874,105 @@ function bindDoubleClick(){
 }
 
 async function openPopup(card){
-  const pid = card.dataset.pid;
-  document.getElementById('popup-title').textContent = pid;
-  document.getElementById('d-pid').textContent  = pid;
-  document.getElementById('d-name').textContent = card.dataset.name;
-  document.getElementById('d-tel').textContent  = card.dataset.tel;
-  document.getElementById('d-res').textContent  = card.dataset.res;
-  document.getElementById('d-area').textContent = card.dataset.area;
-  document.getElementById('d-land').textContent = card.dataset.land;
-  document.getElementById('d-otype').textContent= card.dataset.otype;
-  document.getElementById('d-loc').textContent  = card.dataset.loc;
+  const pid=card.dataset.pid;
+  document.getElementById('popup-title').textContent=pid;
+  document.getElementById('d-pid').textContent=pid;
+  document.getElementById('d-loc').textContent=card.dataset.loc;
+  document.getElementById('d-area').textContent=card.dataset.area;
+  document.getElementById('d-land').textContent=card.dataset.land;
+  document.getElementById('d-res').textContent=card.dataset.res;
   document.querySelectorAll('.ptab').forEach((t,i)=>t.classList.toggle('on',i===0));
   document.querySelectorAll('.pane').forEach((p,i)=>p.classList.toggle('on',i===0));
   document.getElementById('popup-overlay').classList.add('show');
 
-  // 동의서 로드
+  document.getElementById('d-owners-list').innerHTML='<div class="loading-wrap" style="padding:12px"><div class="spinner"></div></div>';
   document.getElementById('popup-consent-list').innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
   document.getElementById('popup-pay-list').innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
   document.getElementById('popup-act-list').innerHTML='<div class="loading-wrap"><div class="spinner"></div></div>';
 
   try {
-    const [consentRows, payRows, actRows] = await Promise.all([
-      sbGet(`owners?%EB%B6%80%EB%8F%99%EC%82%B0id=eq.${encodeURIComponent(pid)}&select=사전,컨설팅,선도,주대단`),
-      sbGet(`payments?부동산id=eq.${encodeURIComponent(pid)}&select=회차,납부일자,금액&order=회차.asc`),
-      sbGet(`activity_logs?부동산id=eq.${encodeURIComponent(pid)}&select=*&order=등록일시.desc&limit=20`),
-    ]);
+    // 1. 소유주 조회: property_bungi → owner_bungi → owners_new 직접 경로
+    // 부동산id → bungi_id (property_bungi) → owner_id (owner_bungi) → 소유주 정보 (owners_new)
+    const pbRows=await sbGet(`property_bungi?부동산id=eq.${encodeURIComponent(pid)}&select=bungi_id`);
+    const bungiIds=[...new Set(pbRows.map(r=>r['bungi_id']).filter(Boolean))];
 
-    // 동의서: owners 컬럼(사전/컨설팅/선도/주대단) 기반, 공동명의 한 명이라도 제출 = 제출
-    const colMap2 = {1:'사전',2:'컨설팅',3:'선도',4:'주대단'};
-    const cmap = {1:'미제출',2:'미제출',3:'미제출',4:'미제출'};
-    consentRows.forEach(ownerRow=>{
-      [1,2,3,4].forEach(n=>{
-        const val = ownerRow[colMap2[n]];
-        if(val==='제출') cmap[n]='제출';
-        else if(val==='반대' && cmap[n]!=='제출') cmap[n]='반대';
-      });
+    let ownerIds=[];
+    if(bungiIds.length>0){
+      const bungiFilter=bungiIds.map(id=>`bungi_id.eq.${id}`).join(',');
+      const obRows=await sbGet(`owner_bungi?or=(${encodeURIComponent(bungiFilter)})&select=owner_id`);
+      ownerIds=[...new Set(obRows.map(r=>r['owner_id']).filter(Boolean))];
+    }
+
+    // owners_new에서 소유주 정보 조회
+    let ownerRows=[];
+    if(ownerIds.length>0){
+      const ownerFilter=ownerIds.map(id=>`id.eq.${id}`).join(',');
+      ownerRows=await sbGet(`owners_new?or=(${encodeURIComponent(ownerFilter)})&select=id,이름,전화번호`);
+    }
+
+    // 소유주 표시
+    if(ownerRows.length===0){
+      document.getElementById('d-owners-list').innerHTML='<div class="field-row"><span class="field-key">소유주</span><span class="field-val" style="color:#888">정보 없음</span></div>';
+    } else {
+      document.getElementById('d-owners-list').innerHTML=ownerRows.map(o=>`
+        <div class="field-row"><span class="field-key">이름</span><span class="field-val">${esc(o['이름']||'—')}</span></div>
+        <div class="field-row"><span class="field-key">전화번호</span><span class="field-val">${esc(o['전화번호']||'연락처 없음')}</span></div>
+      `).join('<div style="height:4px"></div>');
+    }
+
+    // 2. 동의서: consent_records_new — owner_id 기준으로 조회
+    let consentRows=[];
+    if(ownerIds.length>0){
+      const ownerFilter=ownerIds.map(id=>`owner_id.eq.${id}`).join(',');
+      consentRows=await sbGet(`consent_records_new?부동산id=eq.${encodeURIComponent(pid)}&or=(${encodeURIComponent(ownerFilter)})&select=owner_id,차수,상태`);
+    } else {
+      // fallback: 부동산id만으로 조회
+      consentRows=await sbGet(`consent_records_new?부동산id=eq.${encodeURIComponent(pid)}&select=owner_id,차수,상태`);
+    }
+
+    // 차수별 집계
+    const cmap={1:'미제출',2:'미제출',3:'미제출',4:'미제출'};
+    consentRows.forEach(r=>{
+      const n=r['차수'];
+      if(![1,2,3,4].includes(n)) return;
+      const status=r['상태']==='제출'?'제출':r['상태']==='반대'?'반대':'미제출';
+      if(status==='제출') cmap[n]='제출';
+      else if(status==='반대'&&cmap[n]!=='제출') cmap[n]='반대';
     });
-    document.getElementById('popup-consent-list').innerHTML = [1,2,3,4].map(n=>{
-      const s = cmap[n]||'미제출';
-      const cls = s==='제출'?'badge-o':s==='반대'?'badge-x':'badge-dash';
+    document.getElementById('popup-consent-list').innerHTML=[1,2,3,4].map(n=>{
+      const s=cmap[n];
+      const cls=s==='제출'?'badge-o':s==='반대'?'badge-x':'badge-dash';
       return `<div class="consent-item"><span>${CONSENT_NAMES[n]}</span><span class="${cls}">${s}</span></div>`;
     }).join('');
 
-    // 납부
-    const total = payRows.reduce((s,p)=>s+(p['금액']||0),0);
-    document.getElementById('d-pay-total').textContent = total.toLocaleString()+'원';
-    document.getElementById('popup-pay-list').innerHTML = payRows.length===0
-      ? '<div class="empty-msg">납부 내역 없음</div>'
-      : payRows.map(p=>`<div class="pay-item"><span>${p['회차']}회차</span><span style="font-size:11px;color:#666">${p['납부일자']||''}</span><span style="color:#27500A;font-weight:500">${(p['금액']||0).toLocaleString()}원</span></div>`).join('');
+    // 3. 납부: payments_new는 owner_id 기준 — ownerIds로 조회
+    let payRows=[];
+    if(ownerIds.length>0){
+      const ownerFilter=ownerIds.map(id=>`owner_id.eq.${id}`).join(',');
+      payRows=await sbGet(`payments_new?or=(${encodeURIComponent(ownerFilter)})&select=회차,납부일자,금액&order=회차.asc`);
+    }
+    const total=payRows.reduce((s,p)=>s+(p['금액']||0),0);
+    document.getElementById('d-pay-total').textContent=total.toLocaleString()+'원';
+    document.getElementById('popup-pay-list').innerHTML=payRows.length===0
+      ?'<div class="empty-msg">납부 내역 없음</div>'
+      :payRows.map(p=>`<div class="pay-item"><span>${p['회차']}회차</span><span style="font-size:11px;color:#666">${p['납부일자']||''}</span><span style="color:#27500A;font-weight:500">${(p['금액']||0).toLocaleString()}원</span></div>`).join('');
 
-    // 활동기록
-    const resClassMap={'제출완료':'res-accept','재연락필요':'res-revisit','거부':'res-revisit','부재':'res-absent','기타':'res-other'};
-    document.getElementById('popup-act-list').innerHTML = actRows.length===0
-      ? '<div class="empty-msg">활동 기록 없음</div>'
-      : actRows.map(a=>{
-          const dt = a['등록일시']?a['등록일시'].slice(0,10):'—';
-          const rc = resClassMap[a['결과']]||'res-other';
+    // 4. 활동기록: activity_logs — owner_id 기준
+    let actRows=[];
+    if(ownerIds.length>0){
+      const ownerFilter=ownerIds.map(id=>`owner_id.eq.${id}`).join(',');
+      actRows=await sbGet(`activity_logs?or=(${encodeURIComponent(ownerFilter)})&select=*&order=등록일시.desc&limit=20`);
+    }
+    const resClassMap={'제출완료':'res-done','재연락필요':'res-revisit','거부':'res-revisit','부재':'res-absent','기타':'res-other'};
+    document.getElementById('popup-act-list').innerHTML=actRows.length===0
+      ?'<div class="empty-msg">활동 기록 없음</div>'
+      :actRows.map(a=>{
+          const dt=a['등록일시']?a['등록일시'].slice(0,10):'—';
+          const rc=resClassMap[a['결과']]||'res-other';
           return `<div class="act-mini-item">
-            <div class="act-mini-top"><span style="font-weight:500">${esc(a['활동유형'])||''} — ${esc(a['담당자'])||''}</span><span style="font-size:10px;color:#888">${esc(dt)}</span></div>
+            <div class="act-mini-top"><span style="font-weight:500">${esc(a['활동유형']||'')} — ${esc(a['담당자']||'')}</span><span style="font-size:10px;color:#888">${esc(dt)}</span></div>
             ${a['비고']?`<div style="font-size:11px;color:#666;margin-bottom:3px">${esc(a['비고'])}</div>`:''}
-            <span class="act-mini-result ${rc}">${esc(a['결과'])||''}</span>
+            <span class="act-mini-result ${rc}">${esc(a['결과']||'')}</span>
           </div>`;
         }).join('');
   } catch(e){
@@ -1002,36 +997,39 @@ document.getElementById('danji-sel-lookup').addEventListener('change',function()
 document.getElementById('dong-sel').addEventListener('change',function(){ loadDong(this.value); });
 document.getElementById('owner-sel').addEventListener('change',function(){
   const v=this.value;
-  if(!v){ renderOwnerCards(currentDongOwners,{},{}); loadDong(currentDongId); return; }
-  const found=currentDongOwners.filter(o=>o['부동산id']===v);
-  if(found.length) loadDong(currentDongId).then(()=>{
-    // 필터 적용은 loadDong 후 별도로
-  });
-  // 단순하게 해당 1건만 표시
-  const el=document.querySelector(`.ocard[data-pid="${v}"]`);
-  if(el){ document.getElementById('cnt-lbl').textContent='1건 표시'; document.getElementById('cards-wrap').innerHTML=el.outerHTML; bindDoubleClick(); }
+  if(!v){ loadDong(currentDongId); return; }
+  const found=currentDongProps.filter(p=>p['부동산id']===v);
+  if(found.length){
+    renderPropertyCards(found,{},{});
+    // 동의서도 새로 로드
+    loadDong(currentDongId).then(()=>{
+      const el=document.querySelector(`.ocard[data-pid="${v}"]`);
+      if(el){ document.getElementById('cnt-lbl').textContent='1건 표시'; document.getElementById('cards-wrap').innerHTML=el.outerHTML; bindDoubleClick(); }
+    });
+  }
 });
 
 /* ═══════════════════════════════
    TAB 2: 활동 기록
+   - activity_logs 테이블 (owner_id 기준)
+   - 소유주 검색: owners_new 이름 검색
 ═══════════════════════════════ */
 async function loadActivities(){
   try {
-    const rows = await sbGet('activity_logs?select=*&order=등록일시.desc&limit=100');
+    const rows=await sbGet('activity_logs?select=*&order=등록일시.desc&limit=100');
     renderActivities(rows);
   } catch(e){
     document.getElementById('log-list').innerHTML='<div class="empty-msg">오류: '+e.message+'</div>';
   }
 }
 
-const resClassMap={'제출완료':'res-accept','재연락필요':'res-revisit','거부':'res-revisit','부재':'res-absent','기타':'res-other'};
+const resClassMap={'제출완료':'res-done','재연락필요':'res-revisit','거부':'res-revisit','부재':'res-absent','기타':'res-other'};
 
 function renderActivities(rows){
   if(rows.length===0){
     document.getElementById('log-list').innerHTML='<div class="empty-msg">활동 기록이 없습니다.</div>';
     return;
   }
-  // 날짜별 그룹
   const groups={};
   rows.forEach(r=>{
     const dt=r['등록일시']?r['등록일시'].slice(0,10):'—';
@@ -1039,41 +1037,79 @@ function renderActivities(rows){
     groups[dt].push(r);
   });
   const today=new Date().toISOString().slice(0,10);
-  document.getElementById('log-list').innerHTML = Object.entries(groups).map(([dt,list])=>`
+  document.getElementById('log-list').innerHTML=Object.entries(groups).map(([dt,list])=>`
     <div class="date-group">
       <div class="date-lbl">${dt}${dt===today?' 오늘':''}</div>
       ${list.map(a=>{
         const t=a['등록일시']?a['등록일시'].slice(11,16):'';
         const rc=resClassMap[a['결과']]||'res-other';
+        // 소유주명은 activity_logs.소유주명 컬럼 (저장 시 함께 기록)
         return `<div class="act-card">
-          <div class="act-top"><div class="act-left"><span class="act-type-badge">${esc(a['활동유형'])||'—'}</span><span class="act-who">${esc(a['담당자'])||'—'}</span></div><span class="act-time">${esc(t)}</span></div>
-          <div class="act-target">${esc(a['소유주명'])||'—'} <span>${esc(a['부동산id'])||'—'}</span></div>
+          <div class="act-top"><div class="act-left"><span class="act-type-badge">${esc(a['활동유형']||'—')}</span><span class="act-who">${esc(a['담당자']||'—')}</span></div><span class="act-time">${esc(t)}</span></div>
+          <div class="act-target">${esc(a['소유주명']||'—')} <span>${esc(a['부동산id']||'—')}</span></div>
           ${a['비고']?`<div class="act-content">${esc(a['비고'])}</div>`:''}
-          <span class="act-result ${rc}">${esc(a['결과'])||'—'}</span>
+          <span class="act-result ${rc}">${esc(a['결과']||'—')}</span>
         </div>`;
       }).join('')}
     </div>`).join('');
 }
 
-// 소유주 검색 (이름/부동산ID)
+// 소유주 검색 — owners_new 이름 검색 + 부동산id도 지원
 let searchTimer=null;
+let selectedOwner=null; // { name, ownerUUID, pid, 부동산id }
+
 document.getElementById('owner-search').addEventListener('input',async function(){
   const q=this.value.trim();
   if(!q){ document.getElementById('search-result').classList.remove('show'); return; }
   clearTimeout(searchTimer);
   searchTimer=setTimeout(async()=>{
     try {
-      // 이름 or 부동산id로 검색
-      const rows = await sbGet(`owners?or=(이름.ilike.*${encodeURIComponent(q)}*,부동산id.ilike.*${encodeURIComponent(q)}*)&select=부동산id,이름,동,호&limit=20`);
+      // owners_new에서 이름 검색
+      const nameRows=await sbGet(`owners_new?이름=ilike.*${encodeURIComponent(q)}*&select=id,이름,전화번호&limit=20`);
+
+      // owner_bungi → property_bungi 경로로 부동산id 조회
+      const results=[];
+      for(const o of nameRows){
+        const obRows=await sbGet(`owner_bungi?owner_id=eq.${o['id']}&select=bungi_id`);
+        const bungiIds=obRows.map(r=>r['bungi_id']).filter(Boolean);
+        let pid='—';
+        if(bungiIds.length>0){
+          const bungiFilter=bungiIds.map(id=>`bungi_id.eq.${id}`).join(',');
+          const pbRows=await sbGet(`property_bungi?or=(${encodeURIComponent(bungiFilter)})&select=부동산id&limit=1`);
+          if(pbRows.length>0) pid=pbRows[0]['부동산id'];
+        }
+        results.push({...o, 부동산id:pid});
+      }
+
+      // 부동산id 직접 검색도 추가
+      const pidRows=await sbGet(`properties?부동산id=ilike.*${encodeURIComponent(q)}*&select=부동산id&limit=5`);
+      pidRows.forEach(p=>{
+        if(!results.find(r=>r['부동산id']===p['부동산id'])){
+          results.push({id:null, 이름:'(부동산 직접검색)', 부동산id:p['부동산id']});
+        }
+      });
+
       const sr=document.getElementById('search-result');
-      if(rows.length===0){sr.innerHTML='<div class="search-item" style="color:#888">검색 결과 없음</div>';sr.classList.add('show');return;}
-      sr.innerHTML=rows.map(r=>`<div class="search-item" data-name="${esc(r['이름']||'—')}" data-pid="${esc(r['부동산id'])}">${esc(r['이름']||'—')} · ${esc(r['부동산id'])}</div>`).join('');
+      if(results.length===0){
+        sr.innerHTML='<div class="search-item" style="color:#888">검색 결과 없음</div>';
+        sr.classList.add('show'); return;
+      }
+      sr.innerHTML=results.map(r=>`<div class="search-item"
+        data-name="${esc(r['이름']||'—')}"
+        data-owner-id="${esc(r['id']||'')}"
+        data-pid="${esc(r['부동산id']||'—')}">
+        ${esc(r['이름']||'—')} · ${esc(r['부동산id']||'—')}
+      </div>`).join('');
       sr.classList.add('show');
       sr.querySelectorAll('.search-item[data-pid]').forEach(item=>{
         item.addEventListener('click',function(){
           document.querySelectorAll('.search-item').forEach(i=>i.classList.remove('sel'));
           this.classList.add('sel');
-          selectedOwner={name:this.dataset.name,pid:this.dataset.pid};
+          selectedOwner={
+            name: this.dataset.name,
+            ownerUUID: this.dataset.ownerId,
+            pid: this.dataset.pid,
+          };
           document.getElementById('owner-search').value=this.dataset.name+' · '+this.dataset.pid;
           document.getElementById('search-result').classList.remove('show');
         });
@@ -1083,7 +1119,7 @@ document.getElementById('owner-search').addEventListener('input',async function(
 });
 
 // 새 기록 작성
-let selectedResult='', selectedActType='', selectedOwner=null;
+let selectedResult='', selectedActType='';
 document.getElementById('new-btn').addEventListener('click',()=>{
   selectedResult=''; selectedActType=''; selectedOwner=null;
   document.querySelectorAll('.result-btn,.atype-btn').forEach(b=>b.classList.remove('sel'));
@@ -1110,20 +1146,21 @@ document.getElementById('submit-btn').addEventListener('click',async()=>{
   if(!selectedActType){alert('활동 유형을 선택해주세요.');return;}
   if(!selectedOwner){alert('소유주를 선택해주세요.');return;}
   if(!selectedResult){alert('결과를 선택해주세요.');return;}
-  const memo=document.getElementById('memo-area').value.trim();
+  const 비고=document.getElementById('memo-area').value.trim();
   const btn=document.getElementById('submit-btn');
   btn.disabled=true; btn.textContent='저장 중...';
   try {
     await sbPost('activity_logs',{
+      owner_id: selectedOwner.ownerUUID || null,
       부동산id: selectedOwner.pid,
       소유주명: selectedOwner.name,
       담당자: currentUser.name,
       활동유형: selectedActType,
       결과: selectedResult,
-      비고: memo,
+      비고: 비고,
     });
     document.getElementById('form-overlay').classList.remove('show');
-    loadActivities(); // 목록 새로고침
+    loadActivities();
   } catch(e){
     alert('저장 실패: '+e.message);
   }
@@ -1133,101 +1170,42 @@ document.getElementById('submit-btn').addEventListener('click',async()=>{
 /* ═══════════════════════════════
    비밀번호 변경
 ═══════════════════════════════ */
-document.getElementById('pw-change-btn').addEventListener('click', () => {
-  // 필드 초기화
-  document.getElementById('pw-new').value = '';
-  document.getElementById('pw-confirm').value = '';
-  const msg = document.getElementById('pw-msg');
-  msg.className = 'pw-msg';
-  msg.textContent = '';
-  document.getElementById('pw-modal-sub').textContent =
-    (currentUser ? currentUser.name + '님, ' : '') + '변경할 새 비밀번호를 입력하세요';
+document.getElementById('pw-change-btn').addEventListener('click',()=>{
+  document.getElementById('pw-new').value='';
+  document.getElementById('pw-confirm').value='';
+  const msg=document.getElementById('pw-msg');
+  msg.className='pw-msg'; msg.textContent='';
+  document.getElementById('pw-modal-sub').textContent=(currentUser?currentUser.name+'님, ':'')+'변경할 새 비밀번호를 입력하세요';
   document.getElementById('pw-modal-overlay').classList.add('show');
-  setTimeout(() => document.getElementById('pw-new').focus(), 100);
+  setTimeout(()=>document.getElementById('pw-new').focus(),100);
 });
 
-function closePwModal(){
-  document.getElementById('pw-modal-overlay').classList.remove('show');
-}
+function closePwModal(){ document.getElementById('pw-modal-overlay').classList.remove('show'); }
 
-// 모달 관련 이벤트는 DOMContentLoaded 후 등록
-document.addEventListener('DOMContentLoaded', function(){
-  document.getElementById('pw-btn-cancel').addEventListener('click', closePwModal);
-  document.getElementById('pw-modal-overlay').addEventListener('click', function(e){
-    if(e.target === this) closePwModal();
-  });
-  document.getElementById('pw-confirm').addEventListener('keydown', function(e){
-    if(e.key === 'Enter') doChangePw();
-  });
-  document.getElementById('pw-btn-save').addEventListener('click', doChangePw);
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('pw-btn-cancel').addEventListener('click',closePwModal);
+  document.getElementById('pw-modal-overlay').addEventListener('click',function(e){ if(e.target===this) closePwModal(); });
+  document.getElementById('pw-confirm').addEventListener('keydown',function(e){ if(e.key==='Enter') doChangePw(); });
+  document.getElementById('pw-btn-save').addEventListener('click',doChangePw);
 });
 
 async function doChangePw(){
-  const newPw  = document.getElementById('pw-new').value;
-  const confirm = document.getElementById('pw-confirm').value;
-  const msg    = document.getElementById('pw-msg');
-  const btn    = document.getElementById('pw-btn-save');
-
-  // 유효성 검사
-  if(!newPw || !confirm){
-    msg.className = 'pw-msg err';
-    msg.textContent = '비밀번호를 모두 입력해주세요.';
-    return;
-  }
-  if(newPw.length < 8){
-    msg.className = 'pw-msg err';
-    msg.textContent = '비밀번호는 8자 이상이어야 합니다.';
-    return;
-  }
-  if(newPw !== confirm){
-    msg.className = 'pw-msg err';
-    msg.textContent = '비밀번호가 일치하지 않습니다.';
-    document.getElementById('pw-confirm').value = '';
-    document.getElementById('pw-confirm').focus();
-    return;
-  }
-
-  btn.disabled = true; btn.textContent = '변경 중...';
-  msg.className = 'pw-msg'; msg.textContent = '';
-
+  const newPw=document.getElementById('pw-new').value;
+  const confirm=document.getElementById('pw-confirm').value;
+  const msg=document.getElementById('pw-msg');
+  const btn=document.getElementById('pw-btn-save');
+  if(!newPw||!confirm){ msg.className='pw-msg err'; msg.textContent='비밀번호를 모두 입력해주세요.'; return; }
+  if(newPw.length<8){ msg.className='pw-msg err'; msg.textContent='비밀번호는 8자 이상이어야 합니다.'; return; }
+  if(newPw!==confirm){ msg.className='pw-msg err'; msg.textContent='비밀번호가 일치하지 않습니다.'; document.getElementById('pw-confirm').value=''; document.getElementById('pw-confirm').focus(); return; }
+  btn.disabled=true; btn.textContent='변경 중...';
+  msg.className='pw-msg'; msg.textContent='';
   try {
-    const { error } = await _supabase.auth.updateUser({ password: newPw });
-    if(error){
-      msg.className = 'pw-msg err';
-      msg.textContent = '변경 실패: ' + error.message;
-    } else {
-      msg.className = 'pw-msg ok';
-      msg.textContent = '✅ 비밀번호가 변경되었습니다!';
-      // 2초 후 자동 닫기
-      setTimeout(() => closePwModal(), 2000);
-    }
-  } catch(e){
-    msg.className = 'pw-msg err';
-    msg.textContent = '오류: ' + e.message;
-  }
-  btn.disabled = false; btn.textContent = '변경하기';
+    const { error }=await _supabase.auth.updateUser({ password:newPw });
+    if(error){ msg.className='pw-msg err'; msg.textContent='변경 실패: '+error.message; }
+    else { msg.className='pw-msg ok'; msg.textContent='✅ 비밀번호가 변경되었습니다!'; setTimeout(()=>closePwModal(),2000); }
+  } catch(e){ msg.className='pw-msg err'; msg.textContent='오류: '+e.message; }
+  btn.disabled=false; btn.textContent='변경하기';
 }
 </script>
-
-<!-- ════════ 비밀번호 변경 모달 ════════ -->
-<div class="pw-modal-overlay" id="pw-modal-overlay">
-  <div class="pw-modal">
-    <div class="pw-modal-title">🔒 비밀번호 변경</div>
-    <div class="pw-modal-sub" id="pw-modal-sub">변경할 새 비밀번호를 입력하세요</div>
-    <div class="pw-field">
-      <label for="pw-new">새 비밀번호</label>
-      <input type="password" id="pw-new" placeholder="8자 이상 입력">
-    </div>
-    <div class="pw-field">
-      <label for="pw-confirm">새 비밀번호 확인</label>
-      <input type="password" id="pw-confirm" placeholder="한 번 더 입력">
-    </div>
-    <div class="pw-msg" id="pw-msg"></div>
-    <div class="pw-btns">
-      <button class="pw-btn-cancel" id="pw-btn-cancel">취소</button>
-      <button class="pw-btn-save" id="pw-btn-save">변경하기</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
