@@ -380,7 +380,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
       </div>
     </div>
     <div class="form-section">
-      <div class="form-lbl">메모</div>
+      <div class="form-lbl">비고</div>
       <textarea class="memo-area" id="memo-area" placeholder="특이사항을 입력하세요"></textarea>
     </div>
     <button class="submit-btn" id="submit-btn">작성 완료</button>
@@ -976,7 +976,7 @@ async function openPopup(card){
           const rc = resClassMap[a['결과']]||'res-other';
           return `<div class="act-mini-item">
             <div class="act-mini-top"><span style="font-weight:500">${esc(a['활동유형'])||''} — ${esc(a['담당자'])||''}</span><span style="font-size:10px;color:#888">${esc(dt)}</span></div>
-            ${a['메모']?`<div style="font-size:11px;color:#666;margin-bottom:3px">${esc(a['메모'])}</div>`:''}
+            ${a['비고']?`<div style="font-size:11px;color:#666;margin-bottom:3px">${esc(a['비고'])}</div>`:''}
             <span class="act-mini-result ${rc}">${esc(a['결과'])||''}</span>
           </div>`;
         }).join('');
@@ -1048,7 +1048,7 @@ function renderActivities(rows){
         return `<div class="act-card">
           <div class="act-top"><div class="act-left"><span class="act-type-badge">${esc(a['활동유형'])||'—'}</span><span class="act-who">${esc(a['담당자'])||'—'}</span></div><span class="act-time">${esc(t)}</span></div>
           <div class="act-target">${esc(a['소유주명'])||'—'} <span>${esc(a['부동산id'])||'—'}</span></div>
-          ${a['메모']?`<div class="act-content">${esc(a['메모'])}</div>`:''}
+          ${a['비고']?`<div class="act-content">${esc(a['비고'])}</div>`:''}
           <span class="act-result ${rc}">${esc(a['결과'])||'—'}</span>
         </div>`;
       }).join('')}
@@ -1120,7 +1120,7 @@ document.getElementById('submit-btn').addEventListener('click',async()=>{
       담당자: currentUser.name,
       활동유형: selectedActType,
       결과: selectedResult,
-      메모: memo,
+      비고: memo,
     });
     document.getElementById('form-overlay').classList.remove('show');
     loadActivities(); // 목록 새로고침
