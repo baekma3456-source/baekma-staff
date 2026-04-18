@@ -941,7 +941,7 @@ async function openPopup(card){
     const [consentRows, payRows, actRows] = await Promise.all([
       sbGet(`owners?%EB%B6%80%EB%8F%99%EC%82%B0id=eq.${encodeURIComponent(pid)}&select=사전,컨설팅,선도,주대단`),
       sbGet(`payments?부동산id=eq.${encodeURIComponent(pid)}&select=회차,납부일자,금액&order=회차.asc`),
-      sbGet(`activity_logs?부동산id=eq.${encodeURIComponent(pid)}&select=*&order=created_at.desc&limit=20`),
+      sbGet(`activity_logs?부동산id=eq.${encodeURIComponent(pid)}&select=*&order=등록일시.desc&limit=20`),
     ]);
 
     // 동의서: owners 컬럼(사전/컨설팅/선도/주대단) 기반, 공동명의 한 명이라도 제출 = 제출
@@ -972,7 +972,7 @@ async function openPopup(card){
     document.getElementById('popup-act-list').innerHTML = actRows.length===0
       ? '<div class="empty-msg">활동 기록 없음</div>'
       : actRows.map(a=>{
-          const dt = a['created_at']?a['created_at'].slice(0,10):'—';
+          const dt = a['등록일시']?a['등록일시'].slice(0,10):'—';
           const rc = resClassMap[a['결과']]||'res-other';
           return `<div class="act-mini-item">
             <div class="act-mini-top"><span style="font-weight:500">${esc(a['활동유형'])||''} — ${esc(a['담당자'])||''}</span><span style="font-size:10px;color:#888">${esc(dt)}</span></div>
@@ -1017,7 +1017,7 @@ document.getElementById('owner-sel').addEventListener('change',function(){
 ═══════════════════════════════ */
 async function loadActivities(){
   try {
-    const rows = await sbGet('activity_logs?select=*&order=created_at.desc&limit=100');
+    const rows = await sbGet('activity_logs?select=*&order=등록일시.desc&limit=100');
     renderActivities(rows);
   } catch(e){
     document.getElementById('log-list').innerHTML='<div class="empty-msg">오류: '+e.message+'</div>';
@@ -1034,7 +1034,7 @@ function renderActivities(rows){
   // 날짜별 그룹
   const groups={};
   rows.forEach(r=>{
-    const dt=r['created_at']?r['created_at'].slice(0,10):'—';
+    const dt=r['등록일시']?r['등록일시'].slice(0,10):'—';
     if(!groups[dt]) groups[dt]=[];
     groups[dt].push(r);
   });
@@ -1043,7 +1043,7 @@ function renderActivities(rows){
     <div class="date-group">
       <div class="date-lbl">${dt}${dt===today?' 오늘':''}</div>
       ${list.map(a=>{
-        const t=a['created_at']?a['created_at'].slice(11,16):'';
+        const t=a['등록일시']?a['등록일시'].slice(11,16):'';
         const rc=resClassMap[a['결과']]||'res-other';
         return `<div class="act-card">
           <div class="act-top"><div class="act-left"><span class="act-type-badge">${esc(a['활동유형'])||'—'}</span><span class="act-who">${esc(a['담당자'])||'—'}</span></div><span class="act-time">${esc(t)}</span></div>
