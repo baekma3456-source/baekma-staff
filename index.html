@@ -163,9 +163,13 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .search-item:active{background:#E6F1FB;}
 .search-item.sel{background:#E6F1FB;color:#0C447C;font-weight:500;}
 .act-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
+.act-type-grid .atype-btn:last-child:nth-child(3n-1){grid-column:span 1;}
+.act-type-grid .atype-btn:nth-child(4){grid-column:1;}
+.act-type-grid .atype-btn:nth-child(5){grid-column:2/span 2;}
 .atype-btn{padding:7px 4px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#666;cursor:pointer;text-align:center;font-family:inherit;}
 .atype-btn.sel{border-color:#1e3a5f;background:#E6F1FB;color:#1e3a5f;font-weight:500;}
 .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.result-grid .result-btn:last-child:nth-child(odd){grid-column:span 2;}
 .result-btn{padding:8px 4px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#666;cursor:pointer;text-align:center;font-family:inherit;}
 .result-btn.sel{border-color:#1e3a5f;background:#E6F1FB;color:#1e3a5f;font-weight:500;}
 .memo-area{width:100%;padding:8px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;resize:none;height:68px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none;}
@@ -357,7 +361,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
         <button class="atype-btn" data-val="전화">전화</button>
         <button class="atype-btn" data-val="문자">문자</button>
         <button class="atype-btn" data-val="카톡">카톡</button>
-        <button class="atype-btn" data-val="우편">우편</button>
         <button class="atype-btn" data-val="기타">기타</button>
       </div>
     </div>
@@ -369,11 +372,10 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
     <div class="form-section">
       <div class="form-lbl">결과</div>
       <div class="result-grid">
-        <button class="result-btn" data-val="동의서 접수완료">동의서 접수완료</button>
-        <button class="result-btn" data-val="부재중">부재중</button>
-        <button class="result-btn" data-val="재방문 필요">재방문 필요</button>
-        <button class="result-btn" data-val="납부완료">납부완료</button>
-        <button class="result-btn" data-val="반대 의사">반대 의사</button>
+        <button class="result-btn" data-val="제출완료">제출완료</button>
+        <button class="result-btn" data-val="재연락필요">재연락필요</button>
+        <button class="result-btn" data-val="거부">거부</button>
+        <button class="result-btn" data-val="부재">부재</button>
         <button class="result-btn" data-val="기타">기타</button>
       </div>
     </div>
@@ -519,11 +521,11 @@ async function doLogin(){
       btn.disabled = false; btn.textContent = '로그인';
       return;
     }
-    // Auth 성공 → app_users 에서 이름/역할 조회
+    // Auth 성공 → user_profiles 에서 이름/역할 조회
     let name = email.split('@')[0], role = '이사진';
     try {
-      const rows = await sbGet(`app_users?auth_uid=eq.${data.user.id}&select=name,role`);
-      if(rows.length > 0){ name = rows[0].name; role = rows[0].role || '이사진'; }
+      const rows = await sbGet(`user_profiles?id=eq.${data.user.id}&select=이름,역할`);
+      if(rows.length > 0){ name = rows[0]['이름'] || name; role = rows[0]['역할'] || '이사진'; }
     } catch(_){}
     currentUser = { name, role, email };
     errEl.classList.remove('show');
@@ -566,8 +568,8 @@ document.getElementById('logout-btn').addEventListener('click', async ()=>{
     if(!session) return;
     let name = session.user.email.split('@')[0], role = '이사진';
     try {
-      const rows = await sbGet(`app_users?auth_uid=eq.${session.user.id}&select=name,role`);
-      if(rows.length > 0){ name = rows[0].name; role = rows[0].role || '이사진'; }
+      const rows = await sbGet(`user_profiles?id=eq.${session.user.id}&select=이름,역할`);
+      if(rows.length > 0){ name = rows[0]['이름'] || name; role = rows[0]['역할'] || '이사진'; }
     } catch(_){}
     currentUser = { name, role, email: session.user.email };
     enterApp();
@@ -939,7 +941,7 @@ async function openPopup(card){
     const [consentRows, payRows, actRows] = await Promise.all([
       sbGet(`owners?%EB%B6%80%EB%8F%99%EC%82%B0id=eq.${encodeURIComponent(pid)}&select=사전,컨설팅,선도,주대단`),
       sbGet(`payments?부동산id=eq.${encodeURIComponent(pid)}&select=회차,납부일자,금액&order=회차.asc`),
-      sbGet(`activities?부동산id=eq.${encodeURIComponent(pid)}&select=*&order=created_at.desc&limit=20`),
+      sbGet(`activity_logs?부동산id=eq.${encodeURIComponent(pid)}&select=*&order=created_at.desc&limit=20`),
     ]);
 
     // 동의서: owners 컬럼(사전/컨설팅/선도/주대단) 기반, 공동명의 한 명이라도 제출 = 제출
@@ -966,7 +968,7 @@ async function openPopup(card){
       : payRows.map(p=>`<div class="pay-item"><span>${p['회차']}회차</span><span style="font-size:11px;color:#666">${p['납부일자']||''}</span><span style="color:#27500A;font-weight:500">${(p['금액']||0).toLocaleString()}원</span></div>`).join('');
 
     // 활동기록
-    const resClassMap={'동의서 접수완료':'res-accept','부재중':'res-absent','재방문 필요':'res-revisit','납부완료':'res-done','반대 의사':'res-revisit','기타':'res-other'};
+    const resClassMap={'제출완료':'res-accept','재연락필요':'res-revisit','거부':'res-revisit','부재':'res-absent','기타':'res-other'};
     document.getElementById('popup-act-list').innerHTML = actRows.length===0
       ? '<div class="empty-msg">활동 기록 없음</div>'
       : actRows.map(a=>{
@@ -1015,14 +1017,14 @@ document.getElementById('owner-sel').addEventListener('change',function(){
 ═══════════════════════════════ */
 async function loadActivities(){
   try {
-    const rows = await sbGet('activities?select=*&order=created_at.desc&limit=100');
+    const rows = await sbGet('activity_logs?select=*&order=created_at.desc&limit=100');
     renderActivities(rows);
   } catch(e){
     document.getElementById('log-list').innerHTML='<div class="empty-msg">오류: '+e.message+'</div>';
   }
 }
 
-const resClassMap={'동의서 접수완료':'res-accept','부재중':'res-absent','재방문 필요':'res-revisit','납부완료':'res-done','반대 의사':'res-revisit','기타':'res-other'};
+const resClassMap={'제출완료':'res-accept','재연락필요':'res-revisit','거부':'res-revisit','부재':'res-absent','기타':'res-other'};
 
 function renderActivities(rows){
   if(rows.length===0){
@@ -1112,7 +1114,7 @@ document.getElementById('submit-btn').addEventListener('click',async()=>{
   const btn=document.getElementById('submit-btn');
   btn.disabled=true; btn.textContent='저장 중...';
   try {
-    await sbPost('activities',{
+    await sbPost('activity_logs',{
       부동산id: selectedOwner.pid,
       소유주명: selectedOwner.name,
       담당자: currentUser.name,
