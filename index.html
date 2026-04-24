@@ -129,6 +129,16 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
 .act-content{font-size:11px;color:#666;margin-bottom:5px;}
 .act-result{font-size:10px;padding:1px 8px;border-radius:4px;display:inline-block;}
 .res-submit{background:#EAF3DE;color:#27500A;}
+.round-select-wrap{display:none;margin-top:8px;padding:10px;background:#EAF3DE;border-radius:8px;border:1px solid #c3e6a0;}
+.round-select-lbl{font-size:11px;color:#27500A;font-weight:600;margin-bottom:6px;}
+.round-btn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
+.round-btn{padding:7px 4px;font-size:11px;border:1px solid #c3e6a0;border-radius:6px;background:#fff;color:#27500A;cursor:pointer;text-align:center;font-family:inherit;}
+.round-btn.sel{border-color:#27500A;background:#27500A;color:#fff;font-weight:600;}
+.method-select-wrap{display:none;margin-top:6px;padding:10px;background:#EAF3DE;border-radius:8px;border:1px solid #c3e6a0;}
+.method-select-lbl{font-size:11px;color:#27500A;font-weight:600;margin-bottom:6px;}
+.method-btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.method-btn{padding:9px 4px;font-size:12px;font-weight:500;border:1px solid #c3e6a0;border-radius:6px;background:#fff;color:#27500A;cursor:pointer;text-align:center;font-family:inherit;}
+.method-btn.sel{border-color:#27500A;background:#27500A;color:#fff;font-weight:600;}
 .res-retry{background:#FFF3CD;color:#856404;}
 .res-refuse{background:#FCEBEB;color:#791F1F;}
 .res-absent{background:#F1EFE8;color:#5F5E5A;}
@@ -384,6 +394,26 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
         <button class="result-btn" data-val="부재">부재</button>
         <button class="result-btn" data-val="기타">기타</button>
       </div>
+      <!-- 제출완료 선택 시 차수 선택 UI -->
+      <div class="round-select-wrap" id="round-select-wrap">
+        <div class="round-select-lbl">📋 몇 차 동의서를 제출하셨나요?</div>
+        <div class="round-btn-grid">
+          <button class="round-btn" data-round="1">1차 사전</button>
+          <button class="round-btn" data-round="2">2차 컨설팅</button>
+          <button class="round-btn" data-round="3">3차 선도지구</button>
+          <button class="round-btn" data-round="4">4차 주민대표단</button>
+          <button class="round-btn" data-round="5">5차 입안제안</button>
+          <button class="round-btn" data-round="6">6차 추진위원회</button>
+        </div>
+      </div>
+      <!-- 차수 선택 후 접수방법 선택 UI -->
+      <div class="method-select-wrap" id="method-select-wrap">
+        <div class="method-select-lbl">📬 접수 방법을 선택해주세요</div>
+        <div class="method-btn-grid">
+          <button class="method-btn" data-method="서면">📄 서면</button>
+          <button class="method-btn" data-method="전자">💻 전자</button>
+        </div>
+      </div>
     </div>
     <div class="form-section">
       <div class="form-lbl">비고</div>
@@ -449,8 +479,8 @@ const _supabase = supabase.createClient(SB_URL, SB_KEY);
 // ════════════════════════════════════════════════
 let currentUser = null;       // app_user 행
 let allYeonbun  = [];         // 전체 연번 (is_active=true)
-let allConsent  = [];         // 전체 consent 기록 (레거시 — 직접 사용 안 함)
-const consentCache = {};      // 차수별 집계 캐시 {차수: {submitSet, opposeSet}}
+let allConsent  = [];         // 전체 consent 기록 (레거시)
+const consentCache = {};
 let currentPopupYeonbun = null;
 
 const CONSENT_NAMES = {1:'1차: 사전',2:'2차: 컨설팅',3:'3차: 선도지구',4:'4차: 주민대표단',5:'5차: 입안제안',6:'6차: 추진위원회'};
@@ -572,13 +602,8 @@ async function initMain() {
   document.getElementById('act-date-from').value = today;
   document.getElementById('act-date-to').value = today;
 
-  // loadSummaryData 먼저 완료 (allYeonbunProperty 다주택 판정에 필요)
   await loadSummaryData();
-  // 이후 소유주명부·활동기록 병렬 로드
-  await Promise.all([
-    loadLookup(),
-    loadActivityLog(),
-  ]);
+  await Promise.all([loadLookup(), loadActivityLog()]);
 }
 
 // 세션 복원
@@ -627,7 +652,7 @@ async function loadSummaryData() {
   document.getElementById('bars-wrap').innerHTML =
     '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">데이터 불러오는 중...</span></div>';
 
-  // 3개 테이블 병렬 로드 (consent 전체 로드 제거 — 집계 쿼리로 대체)
+  // 4개 테이블 병렬 로드 — range 페이지네이션으로 전체 수신
   [allYeonbun, allYeonbunProperty, allProperty] = await Promise.all([
     fetchAll('yeonbun', '연번', q => q.eq('is_active', true)),
     fetchAll('yeonbun_property', '부동산코드,연번'),
@@ -658,21 +683,16 @@ async function renderSummary() {
   const 차수 = parseInt(document.getElementById('kpi-sel').value);
   const total = allYeonbun.length;
   const activeSet = new Set(allYeonbun.map(y => y['연번']));
-
-  // DB에서 해당 차수 제출/반대 연번만 조회 (fetchAll로 전체 수신 — 1000건 limit 우회)
   const [submitRows, opposeRows] = await Promise.all([
     fetchAll('consent', '연번', q => q.eq('차수', 차수).eq('상태', '제출')),
     fetchAll('consent', '연번', q => q.eq('차수', 차수).eq('상태', '반대')),
   ]);
-
   consentCache[차수] = {
     submitSet: new Set(submitRows.map(r => r['연번']).filter(yn => activeSet.has(yn))),
     opposeSet: new Set(opposeRows.map(r => r['연번']).filter(yn => activeSet.has(yn))),
   };
-
   const submitted = consentCache[차수].submitSet.size;
   const pct = total ? (submitted / total * 100).toFixed(1) : 0;
-
   document.getElementById('kpi-pct').textContent = pct + '%';
   document.getElementById('kpi-sub').textContent = `${submitted.toLocaleString()} / ${total.toLocaleString()} 연번`;
   document.getElementById('kpi-bar').style.width = pct + '%';
@@ -686,7 +706,6 @@ function renderDanjiBars() {
   const dongs = DANJI_DONG[danjiKey] || [];
   const wrap = document.getElementById('bars-wrap');
 
-  // consentCache에서 가져옴 (renderSummary에서 이미 로드됨)
   const cache = consentCache[차수] || { submitSet: new Set(), opposeSet: new Set() };
   const submitSet = cache.submitSet;
   const opposeSet = cache.opposeSet;
@@ -784,33 +803,25 @@ async function loadLookup() {
     const propMap = {};
     propRows.forEach(p => { propMap[p['부동산코드']] = p; });
 
-    // 2단계: 부동산코드 → 연번 매핑 (50개씩 청크 — 병렬)
+    // 2단계: 부동산코드 → 연번 매핑 (50개씩 병렬)
     const pidToYn = {};
     const ypChunks = [];
-    for (let i = 0; i < propCodes.length; i += 50)
-      ypChunks.push(propCodes.slice(i, i + 50));
+    for (let i = 0; i < propCodes.length; i += 50) ypChunks.push(propCodes.slice(i, i + 50));
     const ypResults = await Promise.all(
-      ypChunks.map(chunk =>
-        _supabase.from('yeonbun_property').select('부동산코드, 연번').in('부동산코드', chunk)
-      )
+      ypChunks.map(chunk => _supabase.from('yeonbun_property').select('부동산코드, 연번').in('부동산코드', chunk))
     );
-    ypResults.forEach(({ data }) =>
-      (data || []).forEach(r => { pidToYn[r['부동산코드']] = r['연번']; })
-    );
+    ypResults.forEach(({ data }) => (data || []).forEach(r => { pidToYn[r['부동산코드']] = r['연번']; }));
 
     // 연번 목록
     const ynNums = [...new Set(Object.values(pidToYn))];
 
-    // 3단계: 연번 기준 소유주·동의·납부 조회 (100개씩 청크 — 병렬)
+    // 3단계: 연번 기준 소유주·동의·납부 조회 (100개씩 병렬)
     const yoAll = [], cAll = [], pAll = [];
     const ynChunks = [];
-    for (let i = 0; i < ynNums.length; i += 100)
-      ynChunks.push(ynNums.slice(i, i + 100));
+    for (let i = 0; i < ynNums.length; i += 100) ynChunks.push(ynNums.slice(i, i + 100));
     const ynResults = await Promise.all(
       ynChunks.map(chunk => Promise.all([
-        _supabase.from('yeonbun_owner')
-          .select('연번, 부번, 대표소유주, owner:owner_id(id, 이름, 전화번호, 거주구분)')
-          .in('연번', chunk),
+        _supabase.from('yeonbun_owner').select('연번, 부번, 대표소유주, owner:owner_id(id, 이름, 전화번호, 거주구분)').in('연번', chunk),
         _supabase.from('consent').select('연번, 차수, 상태').in('연번', chunk),
         _supabase.from('payment').select('연번').in('연번', chunk),
       ]))
@@ -1254,6 +1265,8 @@ function resultClass(결과) {
 // ════════════════════════════════════════════════
 let selectedActType = null;
 let selectedResult  = null;
+let selectedRound   = null; // 제출완료 시 선택한 차수
+let selectedMethod  = null; // 제출완료 시 선택한 접수방법 (서면/전자)
 let selectedOwner   = null; // { 연번, owner_id, 이름 }
 
 document.getElementById('new-btn').addEventListener('click', openForm);
@@ -1261,8 +1274,13 @@ document.getElementById('form-close').addEventListener('click', closeForm);
 
 function openForm() {
   selectedActType = null; selectedResult = null; selectedOwner = null;
+  selectedRound = null; selectedMethod = null;
   document.querySelectorAll('.atype-btn').forEach(b => b.classList.remove('sel'));
   document.querySelectorAll('.result-btn').forEach(b => b.classList.remove('sel'));
+  document.querySelectorAll('.round-btn').forEach(b => b.classList.remove('sel'));
+  document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('sel'));
+  document.getElementById('round-select-wrap').style.display = 'none';
+  document.getElementById('method-select-wrap').style.display = 'none';
   document.getElementById('owner-search').value = '';
   document.getElementById('search-result').style.display = 'none';
   document.getElementById('search-result').innerHTML = '';
@@ -1289,6 +1307,39 @@ document.querySelectorAll('.result-btn').forEach(btn => {
     document.querySelectorAll('.result-btn').forEach(b => b.classList.remove('sel'));
     this.classList.add('sel');
     selectedResult = this.dataset.val;
+    // 제출완료 → 차수 선택 표시, 나머지 → 차수/접수방법 숨김
+    if (selectedResult === '제출완료') {
+      document.getElementById('round-select-wrap').style.display = 'block';
+    } else {
+      document.getElementById('round-select-wrap').style.display = 'none';
+      document.getElementById('method-select-wrap').style.display = 'none';
+      selectedRound = null; selectedMethod = null;
+      document.querySelectorAll('.round-btn').forEach(b => b.classList.remove('sel'));
+      document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('sel'));
+    }
+  });
+});
+
+// 차수 버튼 클릭 → 접수방법 선택 표시
+document.querySelectorAll('.round-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.round-btn').forEach(b => b.classList.remove('sel'));
+    this.classList.add('sel');
+    selectedRound = parseInt(this.dataset.round);
+    // 차수 선택 후 접수방법 선택 UI 표시
+    document.getElementById('method-select-wrap').style.display = 'block';
+    // 이전 접수방법 선택 초기화
+    selectedMethod = null;
+    document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('sel'));
+  });
+});
+
+// 접수방법 버튼 클릭
+document.querySelectorAll('.method-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('sel'));
+    this.classList.add('sel');
+    selectedMethod = this.dataset.method;
   });
 });
 
@@ -1383,19 +1434,47 @@ async function searchOwner(q) {
   });
 }
 
+const ROUND_NAMES = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:'4차 주민대표단',5:'5차 입안제안',6:'6차 추진위원회'};
+
 document.getElementById('submit-btn').addEventListener('click', async function () {
   if (!selectedActType) { alert('활동 유형을 선택해주세요.'); return; }
   if (!selectedOwner)   { alert('소유주를 선택해주세요.'); return; }
   if (!selectedResult)  { alert('결과를 선택해주세요.'); return; }
+  if (selectedResult === '제출완료' && !selectedRound)  { alert('제출한 동의서 차수를 선택해주세요.'); return; }
+  if (selectedResult === '제출완료' && !selectedMethod) { alert('접수 방법(서면/전자)을 선택해주세요.'); return; }
 
   this.disabled = true; this.textContent = '저장 중...';
+
+  // 제출완료 → consent 테이블에 '제출' + 접수방법 upsert
+  if (selectedResult === '제출완료') {
+    const { error: cErr } = await _supabase.from('consent').upsert(
+      {
+        연번: selectedOwner.연번,
+        차수: selectedRound,
+        상태: '제출',
+        접수방법: selectedMethod,
+        제출일시: new Date().toISOString()
+      },
+      { onConflict: '연번,차수' }
+    );
+    if (cErr) {
+      alert('동의서 반영 실패: ' + cErr.message);
+      this.disabled = false; this.textContent = '작성 완료';
+      return;
+    }
+  }
+
+  // activity_log 결과에 차수 + 접수방법 포함
+  const 결과텍스트 = selectedResult === '제출완료'
+    ? `제출완료(${ROUND_NAMES[selectedRound]}·${selectedMethod})`
+    : selectedResult;
 
   const { error } = await _supabase.from('activity_log').insert({
     연번: selectedOwner.연번,
     owner_id: selectedOwner.owner_id,
     부동산코드: selectedOwner.부동산코드 || null,
     활동유형: selectedActType,
-    결과: selectedResult,
+    결과: 결과텍스트,
     내용: document.getElementById('memo-area').value.trim() || null,
     담당자: currentUser.name,
     활동일시: new Date().toISOString()
