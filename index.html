@@ -318,14 +318,14 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
       </div>
       <div class="search-row">
         <input id="name-search-input" placeholder="이름 검색 (선택)" autocomplete="off">
-        <button onclick="loadLookup()">조회</button>
+        <button onclick="loadLookup()">검색</button>
       </div>
       <div class="meta-row">
         <span class="cnt" id="cnt-lbl">0건 표시</span>
-        <span class="hint">탭 → 상세보기</span>
+        <span class="hint">카드 탭 → 상세보기</span>
       </div>
       <div class="cards" id="cards-wrap">
-        <div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">단지를 선택하세요</span></div>
+        <div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>
       </div>
     </div>
 
@@ -446,11 +446,11 @@ let currentPopupYeonbun = null;
 
 const CONSENT_NAMES = {1:'1차: 사전',2:'2차: 컨설팅',3:'3차: 선도지구',4:'4차: 주민대표단'};
 const DANJI_DONG = {
-  '3':['301','302','303','304','305','306','307'],
-  '4':['401','402','403','404','405','406','407','408','409','410','411'],
-  '5':['501','502','503','504','505','506'],
+  '3':['301','302','303','304','305','306','307','308','309','310'],
+  '4':['401','402','403','404','405','406','407','408','409','410','411','412'],
+  '5':['501','502','503','504','505','506','507','508','509','510','511','512','513','514','515','516'],
   '6':['601','602','603','604','605','606','607'],
-  's':['3SS','4SS','4DS','5SS','5DS','6SS','BMS','SCS']
+  's':['3단지 상가','4단지 상가','4단지 분산상가','5단지 상가','5단지 분산상가','6단지 상가','백마상가','설촌상가']
 };
 
 function getDanjiKey(부동산코드) {
@@ -557,8 +557,13 @@ async function initMain() {
   document.getElementById('auto-name').textContent = currentUser.name;
   document.getElementById('screen-login').style.display = 'none';
   document.getElementById('screen-main').style.display = 'flex';
-  await loadSummaryData();
-  loadActivityLog();
+
+  // 종합 데이터 + 301동 소유주명부 병렬 로드
+  await Promise.all([
+    loadSummaryData(),
+    loadLookup(),       // 디폴트 301동 자동 로드
+    loadActivityLog(),
+  ]);
 }
 
 // 세션 복원
@@ -711,8 +716,7 @@ function renderDanjiBars() {
 // ════════════════════════════════════════════════
 document.getElementById('danji-sel-lookup').addEventListener('change', function () {
   populateDongSel(this.value);
-  document.getElementById('cards-wrap').innerHTML = '<div class="loading-wrap"><div class="loading-txt">조회 버튼을 눌러주세요</div></div>';
-  document.getElementById('cnt-lbl').textContent = '0건 표시';
+  loadLookup(); // 단지 변경 시 자동 조회
 });
 
 function populateDongSel(danjiKey) {
@@ -721,7 +725,10 @@ function populateDongSel(danjiKey) {
   sel.innerHTML = dongs.map(d => `<option value="${d}">${d}</option>`).join('');
 }
 
-// 초기 dong 목록 세팅
+// 동 변경 시 자동 조회
+document.getElementById('dong-sel-lookup').addEventListener('change', loadLookup);
+
+// 초기 dong 목록 세팅 (301동 디폴트)
 populateDongSel('3');
 
 async function loadLookup() {
