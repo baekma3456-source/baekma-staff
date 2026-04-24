@@ -333,11 +333,17 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
     <!-- TAB 2: 활동 기록 -->
     <div class="tab-panel" id="panel-2">
       <div class="list-header">
-        <span class="list-lbl">활동 기록 전체</span>
+        <span class="list-lbl">활동 기록</span>
         <button class="new-btn" id="new-btn">+ 새로 작성</button>
       </div>
-      <div id="log-list">
-        <div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">활동 기록 불러오는 중...</span></div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <input type="date" id="act-date-from" class="f-input" style="flex:1;padding:6px 8px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;font-family:inherit;outline:none">
+        <span style="line-height:32px;font-size:11px;color:#888">~</span>
+        <input type="date" id="act-date-to" class="f-input" style="flex:1;padding:6px 8px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;font-family:inherit;outline:none">
+        <button onclick="loadActivityLog()" style="padding:6px 10px;font-size:11px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap">검색</button>
+      </div>
+      <div id="log-list" style="margin-top:8px">
+        <div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>
       </div>
     </div>
 
@@ -559,10 +565,15 @@ async function initMain() {
   document.getElementById('screen-login').style.display = 'none';
   document.getElementById('screen-main').style.display = 'flex';
 
+  // 날짜 필터 기본값: 오늘
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('act-date-from').value = today;
+  document.getElementById('act-date-to').value = today;
+
   // 종합 데이터 + 301동 소유주명부 병렬 로드
   await Promise.all([
     loadSummaryData(),
-    loadLookup(),       // 디폴트 301동 자동 로드
+    loadLookup(),
     loadActivityLog(),
   ]);
 }
@@ -745,7 +756,7 @@ async function loadLookup() {
       .from('property')
       .select('부동산코드, 동, 호, 전유면적')
       .eq('동', dong)
-      .order('호', { ascending: true });
+      .order('호', { ascending: false });
 
     if (!propRows || propRows.length === 0) {
       wrap.innerHTML = '<div class="empty-msg">부동산 정보 없음</div>';
@@ -926,7 +937,10 @@ async function loadPopupBasic(연번) {
 
   const [r0, r1] = await Promise.all([
     _supabase.from('yeonbun_property').select('부동산코드').eq('연번', 연번),
-    _supabase.from('yeonbun_owner').select('부번, 대표소유주, owner:owner_id(이름, 전화번호, 거주구분)').eq('연번', 연번),
+    _supabase.from('yeonbun_owner').select(`
+      부번, 대표소유주, 등기원인일, 소유형태,
+      owner:owner_id(이름, 전화번호, 거주구분, 성별, 생년월일_사업자번호, 얼마집_인증, 얼마집_인증일)
+    `).eq('연번', 연번),
   ]);
 
   const propCodes = (r0.data || []).map(r => r['부동산코드']);
@@ -935,8 +949,11 @@ async function loadPopupBasic(연번) {
     const { data } = await _supabase.from('property').select('부동산코드, 동, 호, 전유면적, 대지크기').in('부동산코드', propCodes);
     props = data || [];
   }
+
+  // 연번의 시행방식 조회
+  const { data: ynRow } = await _supabase.from('yeonbun').select('시행방식').eq('연번', 연번).single();
+
   const yoRows = r1.data || [];
-  // 소유주 중복 제거 (다주택자는 부동산코드별로 행이 생겨 중복됨)
   const uniqueOwners = [];
   const seenOwnerIds = new Set();
   yoRows.forEach(r => {
@@ -953,6 +970,10 @@ async function loadPopupBasic(연번) {
         <span class="field-key">${esc(p['부동산코드'])}</span>
         <span class="field-val">${esc(p['동'])}동 ${esc(p['호'])}호 · ${p['전유면적']||'—'}㎡</span>
       </div>`).join('')}
+    <div class="field-row">
+      <span class="field-key">사업시행방식</span>
+      <span class="field-val">${esc(ynRow?.시행방식||'—')}</span>
+    </div>
     <div class="section-lbl">소유주 (${uniqueOwners.length}명)</div>
     ${uniqueOwners.map(r => `
       <div class="field-row">
@@ -960,8 +981,24 @@ async function loadPopupBasic(연번) {
         <span class="field-val">${esc(r.owner?.전화번호||'연락처 없음')}</span>
       </div>
       <div class="field-row">
+        <span class="field-key">생년월일/사업자</span>
+        <span class="field-val">${esc(r.owner?.생년월일_사업자번호||'—')}</span>
+      </div>
+      <div class="field-row">
+        <span class="field-key">성별</span>
+        <span class="field-val">${esc(r.owner?.성별||'—')}</span>
+      </div>
+      <div class="field-row">
         <span class="field-key">거주구분</span>
         <span class="field-val">${esc(r.owner?.거주구분||'—')}</span>
+      </div>
+      <div class="field-row">
+        <span class="field-key">등기원인일</span>
+        <span class="field-val">${esc(r['등기원인일']||'—')}</span>
+      </div>
+      <div class="field-row">
+        <span class="field-key">얼마집 인증</span>
+        <span class="field-val">${esc(r.owner?.얼마집_인증||'—')} ${r.owner?.얼마집_인증일?'('+esc(r.owner.얼마집_인증일)+')':''}</span>
       </div>`).join('')}
   `;
 }
@@ -1030,9 +1067,16 @@ async function loadPopupAct(연번) {
     .from('activity_log').select('활동유형, 결과, 내용, 담당자, 활동일시')
     .eq('연번', 연번).order('활동일시', { ascending: false }).limit(20);
 
-  if (!rows || rows.length === 0) { p4.innerHTML = '<div class="empty-msg">활동 기록 없음</div>'; return; }
+  if (!rows || rows.length === 0) {
+    p4.innerHTML = `
+      <button class="new-btn" style="width:100%;margin-bottom:12px" onclick="openFormFromPopup(${연번})">+ 활동 기록 작성</button>
+      <div class="empty-msg">활동 기록 없음</div>`;
+    return;
+  }
 
-  p4.innerHTML = rows.map(r => {
+  p4.innerHTML = `
+    <button class="new-btn" style="width:100%;margin-bottom:12px" onclick="openFormFromPopup(${연번})">+ 활동 기록 작성</button>
+    ` + rows.map(r => {
     const dt = r['활동일시'] ? new Date(r['활동일시']).toLocaleDateString('ko-KR') : '—';
     return `
       <div class="act-mini-item">
@@ -1051,11 +1095,21 @@ async function loadPopupAct(연번) {
 // ════════════════════════════════════════════════
 async function loadActivityLog() {
   const wrap = document.getElementById('log-list');
-  const { data: rows } = await _supabase
+  wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
+
+  const dateFrom = document.getElementById('act-date-from')?.value;
+  const dateTo   = document.getElementById('act-date-to')?.value;
+
+  let q = _supabase
     .from('activity_log')
     .select('연번, 활동유형, 결과, 내용, 담당자, 활동일시')
     .order('활동일시', { ascending: false })
-    .limit(50);
+    .limit(100);
+
+  if (dateFrom) q = q.gte('활동일시', dateFrom + 'T00:00:00');
+  if (dateTo)   q = q.lte('활동일시', dateTo   + 'T23:59:59');
+
+  const { data: rows } = await q;
 
   if (!rows || rows.length === 0) {
     wrap.innerHTML = '<div class="empty-msg">활동 기록이 없습니다.</div>';
@@ -1078,6 +1132,31 @@ async function loadActivityLog() {
         <span class="act-result ${resultClass(r['결과'])}">${esc(r['결과'])}</span>
       </div>`;
   }).join('');
+}
+
+// 팝업 활동기록 탭에서 바로 작성 (소유주 자동 선택)
+async function openFormFromPopup(연번) {
+  // 해당 연번의 대표소유주 정보 가져오기
+  const { data: yoRows } = await _supabase
+    .from('yeonbun_owner')
+    .select('부번, 대표소유주, owner:owner_id(id, 이름)')
+    .eq('연번', 연번);
+
+  const all = yoRows || [];
+  const rep = all.find(r => r['대표소유주']) || all.sort((a,b) => (a['부번']||0)-(b['부번']||0))[0];
+
+  // 팝업 닫고 작성 폼 열기
+  document.getElementById('popup-overlay').classList.remove('show');
+  openForm();
+
+  // 소유주 자동 선택
+  if (rep) {
+    selectedOwner = { 연번, owner_id: rep.owner?.id, 이름: rep.owner?.이름||'—' };
+    document.getElementById('owner-search').value = `연번 ${연번} · ${selectedOwner.이름}`;
+    const box = document.getElementById('selected-owner-box');
+    box.textContent = `선택됨: 연번 ${연번} · ${selectedOwner.이름}`;
+    box.style.display = 'block';
+  }
 }
 
 function resultClass(결과) {
