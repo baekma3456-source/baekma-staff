@@ -616,6 +616,7 @@ document.querySelectorAll('.tabs .tab').forEach(tab => {
 // TAB 0: 종합
 // ════════════════════════════════════════════════
 let allYeonbunProperty = []; // 전체 yeonbun_property (부동산코드 → 연번)
+let allYeonbunPropertyReady = false; // 로드 완료 여부
 let allProperty        = []; // 전체 property (부동산코드, 동)
 let propCodeToYn       = {}; // 부동산코드 → 연번
 let propCodeToDong     = {}; // 부동산코드 → 동
@@ -634,6 +635,7 @@ async function loadSummaryData() {
   ]);
 
   // 인덱스 구성
+  allYeonbunPropertyReady = true; // 로드 완료 표시
   allYeonbunProperty.forEach(r => { propCodeToYn[r['부동산코드']] = r['연번']; });
   allProperty.forEach(r => { propCodeToDong[r['부동산코드']] = r['동']; });
 
@@ -751,6 +753,13 @@ async function loadLookup() {
 
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
 
+  // allYeonbunProperty 로드 완료 대기 (다주택 판정에 필요)
+  let waited = 0;
+  while (!allYeonbunPropertyReady && waited < 10000) {
+    await new Promise(r => setTimeout(r, 200));
+    waited += 200;
+  }
+
   try {
     // 1단계: 해당 동의 부동산 목록 (부동산코드 기준 — 카드 1개 = 부동산 1채)
     const { data: propRows } = await _supabase
@@ -819,11 +828,10 @@ async function loadLookup() {
       };
     });
 
-    // 연번별 총 부동산 수 — pidToYn 기반으로 계산 (타이밍 문제 방지)
-    // allYeonbunProperty는 로드 타이밍에 따라 비어있을 수 있어 사용 안 함
+    // 연번별 총 부동산 수
     const ynPropCount = {};
-    Object.values(pidToYn).forEach(yn => {
-      ynPropCount[yn] = (ynPropCount[yn] || 0) + 1;
+    allYeonbunProperty.forEach(r => {
+      ynPropCount[r['연번']] = (ynPropCount[r['연번']] || 0) + 1;
     });
 
     const consentMap = {};
