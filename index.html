@@ -260,7 +260,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
   </div>
   <div class="tabs">
     <div class="tab on" data-tab="0">종합</div>
-    <div class="tab" data-tab="1">소유주 조회</div>
+    <div class="tab" data-tab="1">소유주명부</div>
     <div class="tab" data-tab="2">활동 기록</div>
   </div>
   <div class="tab-content">
@@ -483,14 +483,20 @@ async function sbGet(path) {
   return await r.json();
 }
 
-// Supabase SDK로 전체 데이터 한 번에 로드 (페이지네이션 자동 처리)
-async function fetchAll(table, select) {
-  const { data, error } = await _supabase
-    .from(table)
-    .select(select)
-    .limit(20000);
-  if (error) { console.error(table, error); return []; }
-  return data || [];
+// 전체 데이터 로드 — range 페이지네이션으로 1000건 제한 우회
+async function fetchAll(table, selectCols, filter = null) {
+  const PAGE = 1000;
+  let all = [], from = 0;
+  while (true) {
+    let q = _supabase.from(table).select(selectCols).range(from, from + PAGE - 1);
+    if (filter) q = filter(q);
+    const { data, error } = await q;
+    if (error || !data || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
 }
 
 async function sbGetAll(path, pageSize=1000) {
@@ -601,18 +607,13 @@ async function loadSummaryData() {
   document.getElementById('bars-wrap').innerHTML =
     '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">데이터 불러오는 중...</span></div>';
 
-  // 4개 테이블 병렬 로드 — SDK .select() 사용
-  const [r0, r1, r2, r3] = await Promise.all([
-    _supabase.from('yeonbun').select('연번').eq('is_active', true).limit(20000),
-    _supabase.from('consent').select('연번,차수,상태').limit(20000),
-    _supabase.from('yeonbun_property').select('부동산코드,연번').limit(20000),
-    _supabase.from('property').select('부동산코드,동').limit(20000),
+  // 4개 테이블 병렬 로드 — range 페이지네이션으로 전체 수신
+  [allYeonbun, allConsent, allYeonbunProperty, allProperty] = await Promise.all([
+    fetchAll('yeonbun', '연번', q => q.eq('is_active', true)),
+    fetchAll('consent', '연번,차수,상태'),
+    fetchAll('yeonbun_property', '부동산코드,연번'),
+    fetchAll('property', '부동산코드,동'),
   ]);
-
-  allYeonbun        = r0.data || [];
-  allConsent        = r1.data || [];
-  allYeonbunProperty = r2.data || [];
-  allProperty       = r3.data || [];
 
   // 인덱스 구성
   allYeonbunProperty.forEach(r => { propCodeToYn[r['부동산코드']] = r['연번']; });
@@ -745,58 +746,37 @@ async function loadLookup() {
 
   const ynNums = [...dongYnSet];
 
-  const { data: propRows } = await _supabase
-    .from('property')
-    .select('부동산코드, 동, 호, 전유면적, 대지크기')
-    .eq('동', dong)
-    .order('호', { ascending: true })
-    .limit(2000);
-  const propMap = {};
-  (propRows || []).forEach(p => { propMap[p['부동산코드']] = p; });
+  // 대표소유주 · consent · 납부 — 병렬 조회
+  const [yoResult, cResult, pResult, propResult] = await Promise.all([
+    _supabase.from('yeonbun_owner').select('연번, owner:owner_id(id, 이름, 전화번호, 거주구분)')
+      .in('연번', ynNums).eq('대표소유주', true),
+    _supabase.from('consent').select('연번, 차수, 상태').in('연번', ynNums),
+    _supabase.from('payment').select('연번').in('연번', ynNums),
+    _supabase.from('property').select('부동산코드, 동, 호, 전유면적, 대지크기')
+      .eq('동', dong).order('호', { ascending: true }),
+  ]);
 
-  // 대표소유주 조회 — SDK in() 사용
   const repMap = {};
-  if (ynNums.length > 0) {
-    const { data: yoRows } = await _supabase
-      .from('yeonbun_owner')
-      .select('연번, owner:owner_id(id, 이름, 전화번호, 거주구분)')
-      .in('연번', ynNums)
-      .eq('대표소유주', true)
-      .limit(20000);
-    (yoRows || []).forEach(r => {
-      repMap[r['연번']] = {
-        이름: r.owner?.이름 || '—',
-        전화번호: r.owner?.전화번호 || '',
-        거주구분: r.owner?.거주구분 || '',
-        owner_id: r.owner?.id
-      };
-    });
-  }
+  (yoResult.data || []).forEach(r => {
+    repMap[r['연번']] = {
+      이름: r.owner?.이름 || '—',
+      전화번호: r.owner?.전화번호 || '',
+      거주구분: r.owner?.거주구분 || '',
+      owner_id: r.owner?.id
+    };
+  });
 
-  // consent 조회 — SDK in() 사용
   const consentMap = {};
-  if (ynNums.length > 0) {
-    const { data: cRows } = await _supabase
-      .from('consent')
-      .select('연번, 차수, 상태')
-      .in('연번', ynNums)
-      .limit(20000);
-    (cRows || []).forEach(r => {
-      if (!consentMap[r['연번']]) consentMap[r['연번']] = {};
-      consentMap[r['연번']][r['차수']] = r['상태'];
-    });
-  }
+  (cResult.data || []).forEach(r => {
+    if (!consentMap[r['연번']]) consentMap[r['연번']] = {};
+    consentMap[r['연번']][r['차수']] = r['상태'];
+  });
 
-  // 납부 조회 — SDK in() 사용
   const paySet = new Set();
-  if (ynNums.length > 0) {
-    const { data: pRows } = await _supabase
-      .from('payment')
-      .select('연번')
-      .in('연번', ynNums)
-      .limit(20000);
-    (pRows || []).forEach(r => paySet.add(r['연번']));
-  }
+  (pResult.data || []).forEach(r => paySet.add(r['연번']));
+
+  const propMap = {};
+  (propResult.data || []).forEach(p => { propMap[p['부동산코드']] = p; });
 
   // 이름 필터 후 카드 렌더링
   let filtered = ynNums.filter(yn => {
