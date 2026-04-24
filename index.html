@@ -277,7 +277,8 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
           <div class="kpi-header">
             <span class="kpi-lbl2">동의율</span>
             <select class="dd-sm" id="kpi-sel">
-              <option value="5">5차: 추진위원회</option>
+              <option value="6">6차: 추진위원회</option>
+              <option value="5">5차: 입안제안</option>
               <option value="4">4차: 주민대표단</option>
               <option value="3">3차: 선도지구</option>
               <option value="2">2차: 컨설팅</option>
@@ -451,7 +452,7 @@ let allYeonbun  = [];         // 전체 연번 (is_active=true)
 let allConsent  = [];         // 전체 consent 기록
 let currentPopupYeonbun = null;
 
-const CONSENT_NAMES = {1:'1차: 사전',2:'2차: 컨설팅',3:'3차: 선도지구',4:'4차: 주민대표단',5:'5차: 추진위원회'};
+const CONSENT_NAMES = {1:'1차: 사전',2:'2차: 컨설팅',3:'3차: 선도지구',4:'4차: 주민대표단',5:'5차: 입안제안',6:'6차: 추진위원회'};
 const DANJI_DONG = {
   '3':['301','302','303','304','305','306','307','308','309','310'],
   '4':['401','402','403','404','405','406','407','408','409','410','411','412'],
@@ -895,7 +896,8 @@ async function loadLookup() {
             <div class="c-col"><span class="c-lbl">컨설팅</span>${cval(2)}</div>
             <div class="c-col"><span class="c-lbl">선도지구</span>${cval(3)}</div>
             <div class="c-col"><span class="c-lbl">주민대표단</span>${cval(4)}</div>
-            <div class="c-col"><span class="c-lbl">추진위원회</span>${cval(5)}</div>
+            <div class="c-col"><span class="c-lbl">입안제안</span>${cval(5)}</div>
+            <div class="c-col"><span class="c-lbl">추진위원회</span>${cval(6)}</div>
           </div>
         </div>`;
     }).join('');
@@ -1018,7 +1020,7 @@ async function loadPopupConsent(연번) {
     .from('consent').select('차수, 상태, 접수방법, 제출일시')
     .eq('연번', 연번).order('차수', { ascending: true });
 
-  const roundNames = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:'4차 주민대표단',5:'5차 추진위원회'};
+  const roundNames = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:'4차 주민대표단',5:'5차 입안제안',6:'6차 추진위원회'};
   if (!rows || rows.length === 0) { p2.innerHTML = '<div class="empty-msg">동의 기록 없음</div>'; return; }
 
   p2.innerHTML = rows.map(r => {
