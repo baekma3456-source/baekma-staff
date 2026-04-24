@@ -740,51 +740,99 @@ async function loadLookup() {
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
 
   try {
-    // yeonbun_owner에서 조인 한 방에 — 동 기준으로 필터, 500건 limit
-    let q = _supabase
-      .from('yeonbun_owner')
-      .select(`연번, 대표소유주,
-        owner:owner_id(id, 이름, 전화번호, 거주구분),
-        property:부동산코드(부동산코드, 동, 호, 전유면적)`)
-      .eq('property.동', dong)
-      .eq('대표소유주', true)
-      .order('연번', { ascending: true })
-      .limit(500);
+    // 1단계: 해당 동의 부동산코드 목록
+    const { data: propRows } = await _supabase
+      .from('property').select('부동산코드').eq('동', dong);
 
-    if (nameKw) q = q.ilike('owner.이름', `%${nameKw}%`);
-
-    const { data: yoRows } = await q;
-
-    // 동 필터 — property.동이 null인 행 제거
-    const rows = (yoRows || []).filter(r => r.property?.동 === dong);
-
-    if (rows.length === 0) {
-      wrap.innerHTML = '<div class="empty-msg">검색 결과 없음</div>';
+    if (!propRows || propRows.length === 0) {
+      wrap.innerHTML = '<div class="empty-msg">부동산 정보 없음</div>';
       document.getElementById('cnt-lbl').textContent = '0건 표시';
       return;
     }
 
-    const ynNums = rows.map(r => r['연번']);
+    const propCodes = propRows.map(r => r['부동산코드']);
 
-    // consent · 납부 — 병렬 조회
-    const [cResult, pResult] = await Promise.all([
-      _supabase.from('consent').select('연번, 차수, 상태').in('연번', ynNums),
-      _supabase.from('payment').select('연번').in('연번', ynNums),
+    // 2단계: 해당 부동산코드의 연번 목록
+    // 캐시(propCodeToYn)가 있으면 활용, 없으면 DB 조회
+    let ynSet = new Set();
+    propCodes.forEach(code => { if (propCodeToYn[code]) ynSet.add(propCodeToYn[code]); });
+
+    if (ynSet.size === 0) {
+      const { data: ypRows } = await _supabase
+        .from('yeonbun_property').select('연번').in('부동산코드', propCodes);
+      (ypRows || []).forEach(r => ynSet.add(r['연번']));
+    }
+
+    if (ynSet.size === 0) {
+      wrap.innerHTML = '<div class="empty-msg">연번 정보 없음</div>';
+      document.getElementById('cnt-lbl').textContent = '0건 표시';
+      return;
+    }
+
+    const ynNums = [...ynSet].sort((a, b) => a - b);
+
+    // 3단계: 연번 기준 대표소유주 · consent · 납부 병렬 조회
+    // 대표소유주 없는 경우 대비해 전체 소유주 조회 후 JS에서 처리
+    const [yoResult, cResult, pResult] = await Promise.all([
+      _supabase.from('yeonbun_owner')
+        .select('연번, 부번, 대표소유주, owner:owner_id(id, 이름, 전화번호, 거주구분)')
+        .in('연번', ynNums),
+      _supabase.from('consent')
+        .select('연번, 차수, 상태').in('연번', ynNums),
+      _supabase.from('payment')
+        .select('연번').in('연번', ynNums),
     ]);
+
+    // 연번별 대표소유주 추출 — 없으면 부번 최솟값으로 fallback
+    const repMap = {};
+    const ynOwnerRows = {};
+    (yoResult.data || []).forEach(r => {
+      const yn = r['연번'];
+      if (!ynOwnerRows[yn]) ynOwnerRows[yn] = [];
+      ynOwnerRows[yn].push(r);
+    });
+    Object.entries(ynOwnerRows).forEach(([yn, rows]) => {
+      const rep = rows.find(r => r['대표소유주']) || rows.sort((a,b) => (a['부번']||0) - (b['부번']||0))[0];
+      if (rep) {
+        repMap[yn] = {
+          이름: rep.owner?.이름 || '—',
+          전화번호: rep.owner?.전화번호 || '',
+          거주구분: rep.owner?.거주구분 || '',
+          owner_id: rep.owner?.id
+        };
+      }
+    });
 
     const consentMap = {};
     (cResult.data || []).forEach(r => {
       if (!consentMap[r['연번']]) consentMap[r['연번']] = {};
       consentMap[r['연번']][r['차수']] = r['상태'];
     });
+
     const paySet = new Set((pResult.data || []).map(r => r['연번']));
 
-    document.getElementById('cnt-lbl').textContent = `${rows.length}건 표시`;
+    // 이름 필터
+    let filtered = ynNums.filter(yn =>
+      !nameKw || repMap[yn]?.이름?.includes(nameKw)
+    );
 
-    wrap.innerHTML = rows.map(r => {
-      const yn = r['연번'];
-      const pid = r.property?.부동산코드 || '';
-      const rep = r.owner || {};
+    document.getElementById('cnt-lbl').textContent = `${filtered.length}건 표시`;
+
+    if (filtered.length === 0) {
+      wrap.innerHTML = '<div class="empty-msg">검색 결과 없음</div>';
+      return;
+    }
+
+    // 연번 → 대표 부동산코드 매핑
+    const ynToPid = {};
+    propCodes.forEach(code => {
+      const yn = propCodeToYn[code];
+      if (yn && !ynToPid[yn]) ynToPid[yn] = code;
+    });
+
+    wrap.innerHTML = filtered.map(yn => {
+      const pid = ynToPid[yn] || '';
+      const rep = repMap[yn] || {};
       const cm = consentMap[yn] || {};
       const paid = paySet.has(yn);
 
@@ -800,13 +848,13 @@ async function loadLookup() {
           <div class="yn-line">연번 <span class="yn-num">${yn}</span> · ${esc(pid)}</div>
           <div class="info-row">
             <span class="info-name">${esc(rep.이름||'—')}</span>
-            <span class="${paid ? 'info-pay-y' : 'info-pay-n'}">${paid ? '납부' : '미납'}</span>
+            <span class="${paid?'info-pay-y':'info-pay-n'}">${paid?'납부':'미납'}</span>
           </div>
           <div class="info-row2">
             ${rep.전화번호
               ? `<span class="info-tel">${esc(rep.전화번호)}</span>`
               : `<span class="info-notel">연락처 없음</span>`}
-            <span class="tag ${rep.거주구분 === '거주' ? 'tag-res-y' : 'tag-res-n'}">${esc(rep.거주구분||'—')}</span>
+            <span class="tag ${rep.거주구분==='거주'?'tag-res-y':'tag-res-n'}">${esc(rep.거주구분||'—')}</span>
           </div>
           <div class="divider"></div>
           <div class="consent-grid">
@@ -1073,16 +1121,14 @@ async function searchOwner(q) {
   let rows = [];
 
   if (/^\d+$/.test(q)) {
-    // 연번 검색
+    // 연번 검색 — 대표소유주 없으면 부번 최솟값 fallback
     const { data } = await _supabase
       .from('yeonbun_owner')
-      .select('연번, owner:owner_id(id, 이름, 전화번호)')
-      .eq('연번', parseInt(q))
-      .eq('대표소유주', true)
-      .limit(5);
-    rows = (data || []).map(r => ({
-      연번: r['연번'], owner_id: r.owner?.id, 이름: r.owner?.이름 || '—', 전화번호: r.owner?.전화번호 || ''
-    }));
+      .select('연번, 부번, 대표소유주, owner:owner_id(id, 이름, 전화번호)')
+      .eq('연번', parseInt(q));
+    const all = data || [];
+    const rep = all.find(r => r['대표소유주']) || all.sort((a,b) => (a['부번']||0)-(b['부번']||0))[0];
+    if (rep) rows = [{ 연번: rep['연번'], owner_id: rep.owner?.id, 이름: rep.owner?.이름||'—', 전화번호: rep.owner?.전화번호||'' }];
   } else {
     // 이름 검색
     const { data: oRows } = await _supabase
