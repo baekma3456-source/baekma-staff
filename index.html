@@ -659,15 +659,15 @@ async function renderSummary() {
   const total = allYeonbun.length;
   const activeSet = new Set(allYeonbun.map(y => y['연번']));
 
-  // DB에서 해당 차수 제출/반대 연번만 조회 (전체 consent 로드 불필요)
-  const { data: submitRows } = await _supabase
-    .from('consent').select('연번').eq('차수', 차수).eq('상태', '제출');
-  const { data: opposeRows } = await _supabase
-    .from('consent').select('연번').eq('차수', 차수).eq('상태', '반대');
+  // DB에서 해당 차수 제출/반대 연번만 조회 (fetchAll로 전체 수신 — 1000건 limit 우회)
+  const [submitRows, opposeRows] = await Promise.all([
+    fetchAll('consent', '연번', q => q.eq('차수', 차수).eq('상태', '제출')),
+    fetchAll('consent', '연번', q => q.eq('차수', 차수).eq('상태', '반대')),
+  ]);
 
   consentCache[차수] = {
-    submitSet: new Set((submitRows || []).map(r => r['연번']).filter(yn => activeSet.has(yn))),
-    opposeSet: new Set((opposeRows || []).map(r => r['연번']).filter(yn => activeSet.has(yn))),
+    submitSet: new Set(submitRows.map(r => r['연번']).filter(yn => activeSet.has(yn))),
+    opposeSet: new Set(opposeRows.map(r => r['연번']).filter(yn => activeSet.has(yn))),
   };
 
   const submitted = consentCache[차수].submitSet.size;
