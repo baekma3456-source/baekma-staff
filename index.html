@@ -1109,7 +1109,7 @@ async function loadActivityLog() {
 
   let q = _supabase
     .from('activity_log')
-    .select('연번, 활동유형, 결과, 내용, 담당자, 활동일시')
+    .select('연번, 부동산코드, 활동유형, 결과, 내용, 담당자, 활동일시')
     .eq('담당자', currentUser.name)
     .order('활동일시', { ascending: false })
     .limit(100);
@@ -1124,8 +1124,43 @@ async function loadActivityLog() {
     return;
   }
 
+  // 부동산코드 없는 기록은 연번으로 property 조회
+  const noCodeRows = rows.filter(r => !r['부동산코드'] && r['연번']);
+  const ynAddrMap = {};
+  if (noCodeRows.length > 0) {
+    const ynNums = [...new Set(noCodeRows.map(r => r['연번']))];
+    for (let i = 0; i < ynNums.length; i += 100) {
+      const chunk = ynNums.slice(i, i + 100);
+      const { data: ypRows } = await _supabase
+        .from('yeonbun_property').select('연번, 부동산코드').in('연번', chunk);
+      const codes = (ypRows || []).map(r => r['부동산코드']);
+      if (codes.length > 0) {
+        const { data: pRows } = await _supabase
+          .from('property').select('부동산코드, 동, 호').in('부동산코드', codes);
+        const pMap = {};
+        (pRows || []).forEach(p => { pMap[p['부동산코드']] = p; });
+        (ypRows || []).forEach(r => {
+          const p = pMap[r['부동산코드']];
+          if (p && !ynAddrMap[r['연번']]) ynAddrMap[r['연번']] = `${p['동']}동 ${p['호']}호`;
+        });
+      }
+    }
+  }
+
+  // 부동산코드 있는 기록은 property에서 동호수 직접 조회
+  const pidSet = [...new Set(rows.filter(r => r['부동산코드']).map(r => r['부동산코드']))];
+  const pidAddrMap = {};
+  if (pidSet.length > 0) {
+    const { data: pRows } = await _supabase
+      .from('property').select('부동산코드, 동, 호').in('부동산코드', pidSet);
+    (pRows || []).forEach(p => { pidAddrMap[p['부동산코드']] = `${p['동']}동 ${p['호']}호`; });
+  }
+
   wrap.innerHTML = rows.map(r => {
     const dt = r['활동일시'] ? new Date(r['활동일시']).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+    const pid = r['부동산코드'];
+    const addr = pid ? pidAddrMap[pid] : ynAddrMap[r['연번']];
+    const pidLabel = pid || `연번 ${r['연번']}`;
     return `
       <div class="act-card">
         <div class="act-top">
@@ -1135,7 +1170,10 @@ async function loadActivityLog() {
           </div>
           <span class="act-time">${dt}</span>
         </div>
-        <div class="act-target">연번 ${r['연번']}</div>
+        <div class="act-target">
+          <span style="font-weight:600;color:#1e3a5f">${esc(pidLabel)}</span>
+          ${addr ? `<span style="font-size:11px;color:#555;margin-left:6px">${esc(addr)}</span>` : ''}
+        </div>
         ${r['내용'] ? `<div class="act-content">${esc(r['내용'])}</div>` : ''}
         <span class="act-result ${resultClass(r['결과'])}">${esc(r['결과'])}</span>
       </div>`;
@@ -1144,25 +1182,25 @@ async function loadActivityLog() {
 
 // 팝업 활동기록 탭에서 바로 작성 (소유주 자동 선택)
 async function openFormFromPopup(연번) {
-  // 해당 연번의 대표소유주 정보 가져오기
   const { data: yoRows } = await _supabase
-    .from('yeonbun_owner')
-    .select('부번, 대표소유주, owner:owner_id(id, 이름)')
-    .eq('연번', 연번);
-
+    .from('yeonbun_owner').select('부번, 대표소유주, owner:owner_id(id, 이름)').eq('연번', 연번);
   const all = yoRows || [];
   const rep = all.find(r => r['대표소유주']) || all.sort((a,b) => (a['부번']||0)-(b['부번']||0))[0];
 
-  // 팝업 닫고 작성 폼 열기
+  // 해당 연번에서 현재 보고 있는 팝업의 부동산코드 가져오기
+  const { data: ypRow } = await _supabase
+    .from('yeonbun_property').select('부동산코드').eq('연번', 연번).limit(1).single();
+  const pid = ypRow?.부동산코드 || null;
+
   document.getElementById('popup-overlay').classList.remove('show');
   openForm();
 
-  // 소유주 자동 선택
   if (rep) {
-    selectedOwner = { 연번, owner_id: rep.owner?.id, 이름: rep.owner?.이름||'—' };
-    document.getElementById('owner-search').value = `연번 ${연번} · ${selectedOwner.이름}`;
+    selectedOwner = { 연번, owner_id: rep.owner?.id, 이름: rep.owner?.이름||'—', 부동산코드: pid };
+    const label = pid ? `${pid} · ${selectedOwner.이름}` : `연번 ${연번} · ${selectedOwner.이름}`;
+    document.getElementById('owner-search').value = label;
     const box = document.getElementById('selected-owner-box');
-    box.textContent = `선택됨: 연번 ${연번} · ${selectedOwner.이름}`;
+    box.textContent = `선택됨: ${label}`;
     box.style.display = 'block';
   }
 }
@@ -1239,30 +1277,40 @@ async function searchOwner(q) {
       .eq('연번', parseInt(q));
     const all = data || [];
     const rep = all.find(r => r['대표소유주']) || all.sort((a,b) => (a['부번']||0)-(b['부번']||0))[0];
-    if (rep) rows = [{ 연번: rep['연번'], owner_id: rep.owner?.id, 이름: rep.owner?.이름||'—', 전화번호: rep.owner?.전화번호||'' }];
+    if (rep) {
+      // 해당 연번의 첫 번째 부동산코드 조회
+      const { data: ypRow } = await _supabase
+        .from('yeonbun_property').select('부동산코드').eq('연번', parseInt(q)).limit(1).single();
+      rows = [{ 연번: rep['연번'], owner_id: rep.owner?.id, 이름: rep.owner?.이름||'—', 전화번호: rep.owner?.전화번호||'', 부동산코드: ypRow?.부동산코드||null }];
+    }
   } else {
     // 이름 검색
     const { data: oRows } = await _supabase
-      .from('owner')
-      .select('id, 이름, 전화번호')
-      .ilike('이름', `%${q}%`)
-      .limit(10);
+      .from('owner').select('id, 이름, 전화번호').ilike('이름', `%${q}%`).limit(10);
 
     if (oRows && oRows.length > 0) {
       const ownerIds = oRows.map(o => o.id);
       const { data: ynRows } = await _supabase
-        .from('yeonbun_owner')
-        .select('연번, owner_id')
-        .in('owner_id', ownerIds)
-        .eq('대표소유주', true)
-        .limit(20);
+        .from('yeonbun_owner').select('연번, owner_id').in('owner_id', ownerIds).eq('대표소유주', true).limit(20);
 
       const ynOwnerMap = {};
       (ynRows || []).forEach(r => { ynOwnerMap[r['owner_id']] = r['연번']; });
 
+      // 각 연번의 부동산코드 조회
+      const ynNums = [...new Set(Object.values(ynOwnerMap))];
+      const ynPidMap = {};
+      if (ynNums.length > 0) {
+        const { data: ypRows } = await _supabase
+          .from('yeonbun_property').select('연번, 부동산코드').in('연번', ynNums);
+        (ypRows || []).forEach(r => { if (!ynPidMap[r['연번']]) ynPidMap[r['연번']] = r['부동산코드']; });
+      }
+
       rows = oRows
         .filter(o => ynOwnerMap[o.id])
-        .map(o => ({ 연번: ynOwnerMap[o.id], owner_id: o.id, 이름: o.이름, 전화번호: o.전화번호 || '' }));
+        .map(o => ({
+          연번: ynOwnerMap[o.id], owner_id: o.id, 이름: o.이름,
+          전화번호: o.전화번호 || '', 부동산코드: ynPidMap[ynOwnerMap[o.id]] || null
+        }));
     }
   }
 
@@ -1272,16 +1320,24 @@ async function searchOwner(q) {
   }
 
   resEl.innerHTML = rows.map(r => `
-    <div class="search-item" data-yn="${r.연번}" data-oid="${r.owner_id}" data-name="${esc(r.이름)}">
-      연번 ${r.연번} · ${esc(r.이름)} ${r.전화번호 ? '· '+esc(r.전화번호) : ''}
+    <div class="search-item" data-yn="${r.연번}" data-oid="${r.owner_id}" data-name="${esc(r.이름)}" data-pid="${r.부동산코드||''}">
+      ${r.부동산코드 ? `<span style="font-weight:600">${esc(r.부동산코드)}</span> · ` : `연번 ${r.연번} · `}${esc(r.이름)} ${r.전화번호 ? '· '+esc(r.전화번호) : ''}
     </div>`).join('');
 
   resEl.querySelectorAll('.search-item').forEach(item => {
     item.addEventListener('click', function () {
-      selectedOwner = { 연번: parseInt(this.dataset.yn), owner_id: this.dataset.oid, 이름: this.dataset.name };
-      document.getElementById('owner-search').value = `연번 ${selectedOwner.연번} · ${selectedOwner.이름}`;
+      selectedOwner = {
+        연번: parseInt(this.dataset.yn),
+        owner_id: this.dataset.oid,
+        이름: this.dataset.name,
+        부동산코드: this.dataset.pid || null
+      };
+      const label = selectedOwner.부동산코드
+        ? `${selectedOwner.부동산코드} · ${selectedOwner.이름}`
+        : `연번 ${selectedOwner.연번} · ${selectedOwner.이름}`;
+      document.getElementById('owner-search').value = label;
       const box = document.getElementById('selected-owner-box');
-      box.textContent = `선택됨: 연번 ${selectedOwner.연번} · ${selectedOwner.이름}`;
+      box.textContent = `선택됨: ${label}`;
       box.style.display = 'block';
       resEl.style.display = 'none';
     });
@@ -1298,6 +1354,7 @@ document.getElementById('submit-btn').addEventListener('click', async function (
   const { error } = await _supabase.from('activity_log').insert({
     연번: selectedOwner.연번,
     owner_id: selectedOwner.owner_id,
+    부동산코드: selectedOwner.부동산코드 || null,
     활동유형: selectedActType,
     결과: selectedResult,
     내용: document.getElementById('memo-area').value.trim() || null,
