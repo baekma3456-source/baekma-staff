@@ -581,13 +581,38 @@ document.querySelectorAll('.tabs .tab').forEach(tab => {
 // ════════════════════════════════════════════════
 // TAB 0: 종합
 // ════════════════════════════════════════════════
-async function loadSummaryData() {
-  // 전체 연번 로드
-  allYeonbun = await sbGetAll('yeonbun?is_active=eq.true&select=연번,소유지번');
-  document.getElementById('kpi-total').textContent = allYeonbun.length.toLocaleString();
+let allYeonbunProperty = []; // 전체 yeonbun_property (부동산코드 → 연번)
+let allProperty        = []; // 전체 property (부동산코드, 동)
+let propCodeToYn       = {}; // 부동산코드 → 연번
+let propCodeToDong     = {}; // 부동산코드 → 동
+let ynToDongs          = {}; // 연번 → [동, ...]
 
-  // 전체 consent 로드
-  allConsent = await sbGetAll('consent?select=연번,차수,상태');
+async function loadSummaryData() {
+  document.getElementById('bars-wrap').innerHTML =
+    '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">데이터 불러오는 중...</span></div>';
+
+  // 병렬로 한 번에 로드
+  [allYeonbun, allConsent, allYeonbunProperty, allProperty] = await Promise.all([
+    sbGetAll('yeonbun?is_active=eq.true&select=연번'),
+    sbGetAll('consent?select=연번,차수,상태'),
+    sbGetAll('yeonbun_property?select=부동산코드,연번'),
+    sbGetAll('property?select=부동산코드,동'),
+  ]);
+
+  // 인덱스 구성
+  allYeonbunProperty.forEach(r => { propCodeToYn[r['부동산코드']] = r['연번']; });
+  allProperty.forEach(r => { propCodeToDong[r['부동산코드']] = r['동']; });
+
+  // 연번 → 동 목록 매핑
+  allYeonbunProperty.forEach(r => {
+    const yn = r['연번'];
+    const dong = propCodeToDong[r['부동산코드']];
+    if (!dong) return;
+    if (!ynToDongs[yn]) ynToDongs[yn] = new Set();
+    ynToDongs[yn].add(dong);
+  });
+
+  document.getElementById('kpi-total').textContent = allYeonbun.length.toLocaleString();
 
   renderSummary();
   document.getElementById('kpi-sel').addEventListener('change', renderSummary);
@@ -612,78 +637,57 @@ function renderDanjiBars() {
   const 차수 = parseInt(document.getElementById('kpi-sel').value);
   const danjiKey = document.getElementById('danji-sel-summary').value;
   const dongs = DANJI_DONG[danjiKey] || [];
+  const wrap = document.getElementById('bars-wrap');
 
   const submitSet = new Set(allConsent.filter(c => c['차수'] === 차수 && c['상태'] === '제출').map(c => c['연번']));
   const opposeSet = new Set(allConsent.filter(c => c['차수'] === 차수 && c['상태'] === '반대').map(c => c['연번']));
+  const activeSet = new Set(allYeonbun.map(y => y['연번']));
 
-  // 연번별 부동산코드 매핑 필요 — 소유지번 기반으로 동 추출 불가
-  // 대신 yeonbun_property를 통해 dong 정보를 가져와야 함
-  // 여기서는 property 테이블의 동 기준으로 연번을 그룹핑
-  const wrap = document.getElementById('bars-wrap');
-  wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+  // 캐시된 데이터로만 계산 — DB 조회 없음
+  const dongMap = {};
+  dongs.forEach(dong => { dongMap[dong] = {total:0, submit:0, oppose:0}; });
 
-  (async () => {
-    // 각 동별로 yeonbun 조회 — property 테이블에서 동 기준
-    const dongMap = {};
-    for (const dong of dongs) {
-      const propRows = await sbGetAll(`property?동=eq.${encodeURIComponent(dong)}&select=부동산코드`);
-      const propCodes = propRows.map(p => p['부동산코드']);
-      if (propCodes.length === 0) { dongMap[dong] = {total:0, submit:0, oppose:0}; continue; }
+  activeSet.forEach(yn => {
+    const dongSet = ynToDongs[yn];
+    if (!dongSet) return;
+    dongSet.forEach(dong => {
+      if (!dongMap[dong]) return;
+      dongMap[dong].total++;
+      if (submitSet.has(yn)) dongMap[dong].submit++;
+      else if (opposeSet.has(yn)) dongMap[dong].oppose++;
+    });
+  });
 
-      // yeonbun_property에서 해당 부동산코드의 연번 조회
-      const chunkSize = 50;
-      const ynSet = new Set();
-      for (let i = 0; i < propCodes.length; i += chunkSize) {
-        const chunk = propCodes.slice(i, i + chunkSize);
-        const filter = chunk.map(c => `부동산코드.eq.${c}`).join(',');
-        const ypRows = await sbGet(`yeonbun_property?or=(${encodeURIComponent(filter)})&select=연번`);
-        ypRows.forEach(r => ynSet.add(r['연번']));
-      }
+  if (dongs.every(d => dongMap[d].total === 0)) {
+    wrap.innerHTML = '<div class="empty-msg">데이터 없음</div>';
+    return;
+  }
 
-      // 활성 연번만 필터
-      const activeYn = allYeonbun.map(y => y['연번']);
-      const activeSet = new Set(activeYn);
-      const dongYn = [...ynSet].filter(yn => activeSet.has(yn));
-
-      let submit = 0, oppose = 0;
-      dongYn.forEach(yn => {
-        if (submitSet.has(yn)) submit++;
-        else if (opposeSet.has(yn)) oppose++;
-      });
-      dongMap[dong] = { total: dongYn.length, submit, oppose };
-    }
-
-    if (dongs.every(d => dongMap[d].total === 0)) {
-      wrap.innerHTML = '<div class="empty-msg">데이터 없음</div>';
-      return;
-    }
-
-    wrap.innerHTML = dongs.map(dong => {
-      const d = dongMap[dong] || {total:0,submit:0,oppose:0};
-      if (d.total === 0) return '';
-      const sp = (d.submit/d.total*100).toFixed(1);
-      const op = (d.oppose/d.total*100).toFixed(1);
-      const np = Math.max(0, 100 - parseFloat(sp) - parseFloat(op)).toFixed(1);
-      return `
-        <div class="bar-block">
-          <div class="bar-header">
-            <span class="bar-dong">${dong}</span>
-            <span class="bar-pct">${sp}%</span>
-          </div>
-          <div class="bar-track">
-            <div class="bs" style="width:${sp}%"></div>
-            <div class="bo" style="width:${op}%"></div>
-            <div class="bn" style="width:${np}%"></div>
-          </div>
-          <div class="bar-ft">
-            <span class="leg"><span class="dot dy"></span>제출 ${d.submit}</span>
-            <span class="leg"><span class="dot dn"></span>반대 ${d.oppose}</span>
-            <span class="leg"><span class="dot dg"></span>미제출 ${d.total-d.submit-d.oppose}</span>
-            <span class="leg" style="margin-left:auto;color:#444">전체 ${d.total}</span>
-          </div>
-        </div>`;
-    }).join('');
-  })();
+  wrap.innerHTML = dongs.map(dong => {
+    const d = dongMap[dong];
+    if (d.total === 0) return '';
+    const sp = (d.submit / d.total * 100).toFixed(1);
+    const op = (d.oppose / d.total * 100).toFixed(1);
+    const np = Math.max(0, 100 - parseFloat(sp) - parseFloat(op)).toFixed(1);
+    return `
+      <div class="bar-block">
+        <div class="bar-header">
+          <span class="bar-dong">${dong}</span>
+          <span class="bar-pct">${sp}%</span>
+        </div>
+        <div class="bar-track">
+          <div class="bs" style="width:${sp}%"></div>
+          <div class="bo" style="width:${op}%"></div>
+          <div class="bn" style="width:${np}%"></div>
+        </div>
+        <div class="bar-ft">
+          <span class="leg"><span class="dot dy"></span>제출 ${d.submit}</span>
+          <span class="leg"><span class="dot dn"></span>반대 ${d.oppose}</span>
+          <span class="leg"><span class="dot dg"></span>미제출 ${d.total - d.submit - d.oppose}</span>
+          <span class="leg" style="margin-left:auto;color:#444">전체 ${d.total}</span>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ════════════════════════════════════════════════
@@ -712,78 +716,70 @@ async function loadLookup() {
 
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
 
-  // 해당 동의 부동산 목록
-  const propRows = await sbGetAll(`property?동=eq.${encodeURIComponent(dong)}&select=부동산코드,동,호,전유면적,대지크기&order=호.asc`);
-  if (propRows.length === 0) {
+  // 캐시된 데이터에서 해당 동의 부동산코드 → 연번 추출
+  const dongYnSet = new Set();
+  Object.entries(propCodeToDong).forEach(([code, d]) => {
+    if (d === dong && propCodeToYn[code]) dongYnSet.add(propCodeToYn[code]);
+  });
+
+  if (dongYnSet.size === 0) {
     wrap.innerHTML = '<div class="empty-msg">부동산 정보 없음</div>';
     document.getElementById('cnt-lbl').textContent = '0건 표시';
     return;
   }
 
-  const propCodes = propRows.map(p => p['부동산코드']);
+  const ynNums = [...dongYnSet];
 
-  // yeonbun_property에서 연번 조회
-  const ynMap = {}; // 부동산코드 → 연번
-  for (let i = 0; i < propCodes.length; i += 50) {
-    const chunk = propCodes.slice(i, i + 50);
-    const filter = chunk.map(c => `부동산코드.eq.${c}`).join(',');
-    const rows = await sbGet(`yeonbun_property?or=(${encodeURIComponent(filter)})&select=부동산코드,연번`);
-    rows.forEach(r => { ynMap[r['부동산코드']] = r['연번']; });
+  // 부동산 정보 (동의 전체 — 한 번 조회)
+  const propRows = await sbGetAll(`property?동=eq.${encodeURIComponent(dong)}&select=부동산코드,동,호,전유면적,대지크기&order=호.asc`);
+  const propMap = {};
+  propRows.forEach(p => { propMap[p['부동산코드']] = p; });
+
+  // 대표소유주 조회
+  const repMap = {};
+  for (let i = 0; i < ynNums.length; i += 100) {
+    const chunk = ynNums.slice(i, i + 100);
+    const filter = chunk.map(n => `연번.eq.${n}`).join(',');
+    const rows = await sbGet(`yeonbun_owner?or=(${encodeURIComponent(filter)})&대표소유주=eq.true&select=연번,owner:owner_id(id,이름,전화번호,거주구분)`);
+    rows.forEach(r => {
+      repMap[r['연번']] = {
+        이름: r.owner?.이름 || '—',
+        전화번호: r.owner?.전화번호 || '',
+        거주구분: r.owner?.거주구분 || '',
+        owner_id: r.owner?.id
+      };
+    });
   }
 
-  const ynNums = [...new Set(Object.values(ynMap))];
-
-  // 연번별 대표소유주 조회
-  const repMap = {}; // 연번 → { 이름, 전화번호, id }
-  if (ynNums.length > 0) {
-    for (let i = 0; i < ynNums.length; i += 100) {
-      const chunk = ynNums.slice(i, i + 100);
-      const filter = chunk.map(n => `연번.eq.${n}`).join(',');
-      const rows = await sbGet(`yeonbun_owner?or=(${encodeURIComponent(filter)})&대표소유주=eq.true&select=연번,owner:owner_id(id,이름,전화번호,거주구분)`);
-      rows.forEach(r => {
-        repMap[r['연번']] = {
-          이름: r.owner?.이름 || '—',
-          전화번호: r.owner?.전화번호 || '',
-          거주구분: r.owner?.거주구분 || '',
-          owner_id: r.owner?.id
-        };
-      });
-    }
-  }
-
-  // consent 조회 (해당 연번)
-  const consentMap = {}; // 연번 → {1:상태, 2:상태, ...}
-  if (ynNums.length > 0) {
-    for (let i = 0; i < ynNums.length; i += 100) {
-      const chunk = ynNums.slice(i, i + 100);
-      const filter = chunk.map(n => `연번.eq.${n}`).join(',');
-      const rows = await sbGet(`consent?or=(${encodeURIComponent(filter)})&select=연번,차수,상태`);
-      rows.forEach(r => {
-        if (!consentMap[r['연번']]) consentMap[r['연번']] = {};
-        consentMap[r['연번']][r['차수']] = r['상태'];
-      });
-    }
+  // consent 조회
+  const consentMap = {};
+  for (let i = 0; i < ynNums.length; i += 100) {
+    const chunk = ynNums.slice(i, i + 100);
+    const filter = chunk.map(n => `연번.eq.${n}`).join(',');
+    const rows = await sbGet(`consent?or=(${encodeURIComponent(filter)})&select=연번,차수,상태`);
+    rows.forEach(r => {
+      if (!consentMap[r['연번']]) consentMap[r['연번']] = {};
+      consentMap[r['연번']][r['차수']] = r['상태'];
+    });
   }
 
   // 납부 조회
-  const paySet = new Set(); // 납부된 연번
-  if (ynNums.length > 0) {
-    for (let i = 0; i < ynNums.length; i += 100) {
-      const chunk = ynNums.slice(i, i + 100);
-      const filter = chunk.map(n => `연번.eq.${n}`).join(',');
-      const rows = await sbGet(`payment?or=(${encodeURIComponent(filter)})&select=연번`);
-      rows.forEach(r => paySet.add(r['연번']));
-    }
+  const paySet = new Set();
+  for (let i = 0; i < ynNums.length; i += 100) {
+    const chunk = ynNums.slice(i, i + 100);
+    const filter = chunk.map(n => `연번.eq.${n}`).join(',');
+    const rows = await sbGet(`payment?or=(${encodeURIComponent(filter)})&select=연번`);
+    rows.forEach(r => paySet.add(r['연번']));
   }
 
-  // 이름 필터
-  let filtered = propRows.filter(p => ynMap[p['부동산코드']]);
-  if (nameKw) {
-    filtered = filtered.filter(p => {
-      const yn = ynMap[p['부동산코드']];
-      return repMap[yn]?.이름?.includes(nameKw);
-    });
-  }
+  // 이름 필터 후 카드 렌더링
+  let filtered = ynNums.filter(yn => {
+    if (!nameKw) return true;
+    return repMap[yn]?.이름?.includes(nameKw);
+  });
+
+  // 연번 오름차순 정렬
+  filtered.sort((a, b) => a - b);
 
   document.getElementById('cnt-lbl').textContent = `${filtered.length}건 표시`;
 
@@ -792,9 +788,10 @@ async function loadLookup() {
     return;
   }
 
-  wrap.innerHTML = filtered.map(p => {
-    const pid = p['부동산코드'];
-    const yn = ynMap[pid];
+  wrap.innerHTML = filtered.map(yn => {
+    // 해당 연번의 대표 부동산코드 찾기
+    const pid = Object.entries(propCodeToYn).find(([code, n]) => n === yn && propCodeToDong[code] === dong)?.[0] || '';
+    const prop = propMap[pid] || {};
     const rep = repMap[yn] || {};
     const cm = consentMap[yn] || {};
     const paid = paySet.has(yn);
