@@ -1171,8 +1171,7 @@ async function loadActivityLog() {
           <span class="act-time">${dt}</span>
         </div>
         <div class="act-target">
-          <span style="font-weight:600;color:#1e3a5f">${esc(pidLabel)}</span>
-          ${addr ? `<span style="font-size:11px;color:#555;margin-left:6px">${esc(addr)}</span>` : ''}
+          <span style="font-weight:600;color:#1e3a5f">${esc(addr || pidLabel)}</span>
         </div>
         ${r['내용'] ? `<div class="act-content">${esc(r['내용'])}</div>` : ''}
         <span class="act-result ${resultClass(r['결과'])}">${esc(r['결과'])}</span>
