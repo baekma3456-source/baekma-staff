@@ -1071,7 +1071,7 @@ async function loadPopupAct(연번) {
   p4.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
 
   const { data: rows } = await _supabase
-    .from('activity_log').select('활동유형, 결과, 내용, 담당자, 활동일시')
+    .from('activity_log').select('부동산코드, 활동유형, 결과, 내용, 담당자, 활동일시')
     .eq('연번', 연번).order('활동일시', { ascending: false }).limit(20);
 
   if (!rows || rows.length === 0) {
@@ -1081,14 +1081,27 @@ async function loadPopupAct(연번) {
     return;
   }
 
+  // 부동산코드 → 동호수 조회
+  const pidSet = [...new Set(rows.filter(r => r['부동산코드']).map(r => r['부동산코드']))];
+  const pidAddrMap = {};
+  if (pidSet.length > 0) {
+    const { data: pRows } = await _supabase
+      .from('property').select('부동산코드, 동, 호').in('부동산코드', pidSet);
+    (pRows || []).forEach(p => { pidAddrMap[p['부동산코드']] = `${p['동']}동 ${p['호']}호`; });
+  }
+
   p4.innerHTML = `
     <button class="new-btn" style="width:100%;margin-bottom:12px" onclick="openFormFromPopup(${연번})">+ 활동 기록 작성</button>
     ` + rows.map(r => {
     const dt = r['활동일시'] ? new Date(r['활동일시']).toLocaleDateString('ko-KR') : '—';
+    const addr = r['부동산코드'] ? pidAddrMap[r['부동산코드']] : null;
     return `
       <div class="act-mini-item">
         <div class="act-mini-top">
-          <span>${esc(r['활동유형'])} · ${esc(r['담당자']||'—')}</span>
+          <div>
+            <span>${esc(r['활동유형'])} · ${esc(r['담당자']||'—')}</span>
+            ${addr ? `<span style="font-size:10px;font-weight:600;color:#1e3a5f;margin-left:6px">${esc(addr)}</span>` : ''}
+          </div>
           <span style="font-size:10px;color:#888">${dt}</span>
         </div>
         <div>${esc(r['내용']||'')}</div>
