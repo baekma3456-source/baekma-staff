@@ -752,14 +752,18 @@ async function loadLookup() {
 
     const propCodes = propRows.map(r => r['부동산코드']);
 
-    // 2단계: 해당 부동산코드의 연번 목록 — 50개씩 나눠서 조회 (URL 길이 제한 우회)
+    // 2단계: 해당 부동산코드의 연번 목록 + ynToPid 동시 구성
     const ynSet = new Set();
+    const ynToPid = {};
     const chunkSize = 50;
     for (let i = 0; i < propCodes.length; i += chunkSize) {
       const chunk = propCodes.slice(i, i + chunkSize);
       const { data: ypRows } = await _supabase
-        .from('yeonbun_property').select('연번').in('부동산코드', chunk);
-      (ypRows || []).forEach(r => ynSet.add(r['연번']));
+        .from('yeonbun_property').select('연번, 부동산코드').in('부동산코드', chunk);
+      (ypRows || []).forEach(r => {
+        ynSet.add(r['연번']);
+        if (!ynToPid[r['연번']]) ynToPid[r['연번']] = r['부동산코드'];
+      });
     }
 
     if (ynSet.size === 0) {
@@ -798,12 +802,19 @@ async function loadLookup() {
     });
     Object.entries(ynOwnerRows).forEach(([yn, rows]) => {
       const rep = rows.find(r => r['대표소유주']) || rows.sort((a,b) => (a['부번']||0) - (b['부번']||0))[0];
+      // 고유 owner_id 수로 공동 여부 판단
+      const uniqueOwners = new Set(rows.map(r => r.owner?.id)).size;
+      // 해당 연번의 총 부동산 수 (allYeonbunProperty 캐시 활용)
+      const propCount = allYeonbunProperty.filter(r => r['연번'] === parseInt(yn)).length || 1;
       if (rep) {
         repMap[yn] = {
           이름: rep.owner?.이름 || '—',
           전화번호: rep.owner?.전화번호 || '',
           거주구분: rep.owner?.거주구분 || '',
-          owner_id: rep.owner?.id
+          owner_id: rep.owner?.id,
+          소유형태: uniqueOwners > 1 ? '공동' : '단독',
+          공동인원: uniqueOwners,
+          부동산수: propCount,
         };
       }
     });
@@ -828,15 +839,6 @@ async function loadLookup() {
       return;
     }
 
-    // 연번 → 대표 부동산코드 매핑 (조회한 yeonbun_property 데이터 활용)
-    const ynToPid = {};
-    (ypRows || []).forEach(r => {
-      // 해당 동의 부동산코드만 매핑
-      if (propCodes.includes(r['부동산코드']) && !ynToPid[r['연번']]) {
-        ynToPid[r['연번']] = r['부동산코드'];
-      }
-    });
-
     wrap.innerHTML = filtered.map(yn => {
       const pid = ynToPid[yn] || '';
       const rep = repMap[yn] || {};
@@ -852,9 +854,16 @@ async function loadLookup() {
 
       return `
         <div class="ocard" onclick="openPopup(${yn})">
-          <div class="yn-line">연번 <span class="yn-num">${yn}</span> · ${esc(pid)}</div>
+          <div class="yn-line">
+            <span>${esc(pid)}</span>
+            <span style="display:flex;align-items:center;gap:6px">
+              <span class="tag ${rep.소유형태==='공동'?'badge-joint':'tag-res-y'}" style="font-size:10px;padding:1px 7px">${rep.소유형태||'단독'}</span>
+              ${rep.부동산수 > 1 ? `<span style="font-size:10px;color:#888">외 ${rep.부동산수-1}채</span>` : ''}
+              <span style="font-size:10px;color:#999">연번 <strong style="color:#1e3a5f">${yn}</strong></span>
+            </span>
+          </div>
           <div class="info-row">
-            <span class="info-name">${esc(rep.이름||'—')}</span>
+            <span class="info-name">${esc(rep.이름||'—')}${rep.소유형태==='공동'?`<span class="badge-joint" style="margin-left:5px;font-size:10px">외 ${rep.공동인원-1}명</span>`:''}</span>
             <span class="${paid?'info-pay-y':'info-pay-n'}">${paid?'납부':'미납'}</span>
           </div>
           <div class="info-row2">
