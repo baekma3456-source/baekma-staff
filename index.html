@@ -449,7 +449,8 @@ const _supabase = supabase.createClient(SB_URL, SB_KEY);
 // ════════════════════════════════════════════════
 let currentUser = null;       // app_user 행
 let allYeonbun  = [];         // 전체 연번 (is_active=true)
-let allConsent  = [];         // 전체 consent 기록
+let allConsent  = [];         // 전체 consent 기록 (레거시 — 직접 사용 안 함)
+const consentCache = {};      // 차수별 집계 캐시 {차수: {submitSet, opposeSet}}
 let currentPopupYeonbun = null;
 
 const CONSENT_NAMES = {1:'1차: 사전',2:'2차: 컨설팅',3:'3차: 선도지구',4:'4차: 주민대표단',5:'5차: 입안제안',6:'6차: 추진위원회'};
@@ -626,10 +627,9 @@ async function loadSummaryData() {
   document.getElementById('bars-wrap').innerHTML =
     '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">데이터 불러오는 중...</span></div>';
 
-  // 4개 테이블 병렬 로드 — range 페이지네이션으로 전체 수신
-  [allYeonbun, allConsent, allYeonbunProperty, allProperty] = await Promise.all([
+  // 3개 테이블 병렬 로드 (consent 전체 로드 제거 — 집계 쿼리로 대체)
+  [allYeonbun, allYeonbunProperty, allProperty] = await Promise.all([
     fetchAll('yeonbun', '연번', q => q.eq('is_active', true)),
-    fetchAll('consent', '연번,차수,상태'),
     fetchAll('yeonbun_property', '부동산코드,연번'),
     fetchAll('property', '부동산코드,동'),
   ]);
@@ -654,11 +654,23 @@ async function loadSummaryData() {
   document.getElementById('danji-sel-summary').addEventListener('change', renderDanjiBars);
 }
 
-function renderSummary() {
+async function renderSummary() {
   const 차수 = parseInt(document.getElementById('kpi-sel').value);
   const total = allYeonbun.length;
-  const submitSet = new Set(allConsent.filter(c => c['차수'] === 차수 && c['상태'] === '제출').map(c => c['연번']));
-  const submitted = allYeonbun.filter(y => submitSet.has(y['연번'])).length;
+  const activeSet = new Set(allYeonbun.map(y => y['연번']));
+
+  // DB에서 해당 차수 제출/반대 연번만 조회 (전체 consent 로드 불필요)
+  const { data: submitRows } = await _supabase
+    .from('consent').select('연번').eq('차수', 차수).eq('상태', '제출');
+  const { data: opposeRows } = await _supabase
+    .from('consent').select('연번').eq('차수', 차수).eq('상태', '반대');
+
+  consentCache[차수] = {
+    submitSet: new Set((submitRows || []).map(r => r['연번']).filter(yn => activeSet.has(yn))),
+    opposeSet: new Set((opposeRows || []).map(r => r['연번']).filter(yn => activeSet.has(yn))),
+  };
+
+  const submitted = consentCache[차수].submitSet.size;
   const pct = total ? (submitted / total * 100).toFixed(1) : 0;
 
   document.getElementById('kpi-pct').textContent = pct + '%';
@@ -674,8 +686,10 @@ function renderDanjiBars() {
   const dongs = DANJI_DONG[danjiKey] || [];
   const wrap = document.getElementById('bars-wrap');
 
-  const submitSet = new Set(allConsent.filter(c => c['차수'] === 차수 && c['상태'] === '제출').map(c => c['연번']));
-  const opposeSet = new Set(allConsent.filter(c => c['차수'] === 차수 && c['상태'] === '반대').map(c => c['연번']));
+  // consentCache에서 가져옴 (renderSummary에서 이미 로드됨)
+  const cache = consentCache[차수] || { submitSet: new Set(), opposeSet: new Set() };
+  const submitSet = cache.submitSet;
+  const opposeSet = cache.opposeSet;
   const activeSet = new Set(allYeonbun.map(y => y['연번']));
 
   // 캐시된 데이터로만 계산 — DB 조회 없음
@@ -770,33 +784,42 @@ async function loadLookup() {
     const propMap = {};
     propRows.forEach(p => { propMap[p['부동산코드']] = p; });
 
-    // 2단계: 부동산코드 → 연번 매핑 (50개씩 청크)
+    // 2단계: 부동산코드 → 연번 매핑 (50개씩 청크 — 병렬)
     const pidToYn = {};
-    for (let i = 0; i < propCodes.length; i += 50) {
-      const chunk = propCodes.slice(i, i + 50);
-      const { data: ypRows } = await _supabase
-        .from('yeonbun_property').select('부동산코드, 연번').in('부동산코드', chunk);
-      (ypRows || []).forEach(r => { pidToYn[r['부동산코드']] = r['연번']; });
-    }
+    const ypChunks = [];
+    for (let i = 0; i < propCodes.length; i += 50)
+      ypChunks.push(propCodes.slice(i, i + 50));
+    const ypResults = await Promise.all(
+      ypChunks.map(chunk =>
+        _supabase.from('yeonbun_property').select('부동산코드, 연번').in('부동산코드', chunk)
+      )
+    );
+    ypResults.forEach(({ data }) =>
+      (data || []).forEach(r => { pidToYn[r['부동산코드']] = r['연번']; })
+    );
 
     // 연번 목록
     const ynNums = [...new Set(Object.values(pidToYn))];
 
-    // 3단계: 연번 기준 소유주·동의·납부 조회 (100개씩 청크)
+    // 3단계: 연번 기준 소유주·동의·납부 조회 (100개씩 청크 — 병렬)
     const yoAll = [], cAll = [], pAll = [];
-    for (let i = 0; i < ynNums.length; i += 100) {
-      const chunk = ynNums.slice(i, i + 100);
-      const [yoR, cR, pR] = await Promise.all([
+    const ynChunks = [];
+    for (let i = 0; i < ynNums.length; i += 100)
+      ynChunks.push(ynNums.slice(i, i + 100));
+    const ynResults = await Promise.all(
+      ynChunks.map(chunk => Promise.all([
         _supabase.from('yeonbun_owner')
           .select('연번, 부번, 대표소유주, owner:owner_id(id, 이름, 전화번호, 거주구분)')
           .in('연번', chunk),
         _supabase.from('consent').select('연번, 차수, 상태').in('연번', chunk),
         _supabase.from('payment').select('연번').in('연번', chunk),
-      ]);
+      ]))
+    );
+    ynResults.forEach(([yoR, cR, pR]) => {
       yoAll.push(...(yoR.data || []));
       cAll.push(...(cR.data || []));
       pAll.push(...(pR.data || []));
-    }
+    });
 
     // 연번별 대표소유주 (없으면 부번 최솟값 fallback)
     const repMap = {};
@@ -1024,9 +1047,7 @@ async function loadPopupConsent(연번) {
   const roundNames = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:'4차 주민대표단',5:'5차 입안제안',6:'6차 추진위원회'};
   const rowMap = {};
   (rows || []).forEach(r => { rowMap[r['차수']] = r; });
-  const allRounds = [1, 2, 3, 4, 5, 6];
-
-  p2.innerHTML = allRounds.map(차수 => {
+  p2.innerHTML = [1,2,3,4,5,6].map(차수 => {
     const r = rowMap[차수] || { 차수, 상태: '미제출', 접수방법: null, 제출일시: null };
     const s = r['상태'];
     const badge = s === '제출' ? `<span class="badge-o">제출</span>`
