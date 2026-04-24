@@ -725,112 +725,94 @@ function populateDongSel(danjiKey) {
 populateDongSel('3');
 
 async function loadLookup() {
-  const danjiKey = document.getElementById('danji-sel-lookup').value;
   const dong = document.getElementById('dong-sel-lookup').value;
   const nameKw = document.getElementById('name-search-input').value.trim();
   const wrap = document.getElementById('cards-wrap');
 
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
 
-  // 캐시된 데이터에서 해당 동의 부동산코드 → 연번 추출
-  const dongYnSet = new Set();
-  Object.entries(propCodeToDong).forEach(([code, d]) => {
-    if (d === dong && propCodeToYn[code]) dongYnSet.add(propCodeToYn[code]);
-  });
+  try {
+    // yeonbun_owner에서 조인 한 방에 — 동 기준으로 필터, 500건 limit
+    let q = _supabase
+      .from('yeonbun_owner')
+      .select(`연번, 대표소유주,
+        owner:owner_id(id, 이름, 전화번호, 거주구분),
+        property:부동산코드(부동산코드, 동, 호, 전유면적)`)
+      .eq('property.동', dong)
+      .eq('대표소유주', true)
+      .order('연번', { ascending: true })
+      .limit(500);
 
-  if (dongYnSet.size === 0) {
-    wrap.innerHTML = '<div class="empty-msg">부동산 정보 없음</div>';
-    document.getElementById('cnt-lbl').textContent = '0건 표시';
-    return;
-  }
+    if (nameKw) q = q.ilike('owner.이름', `%${nameKw}%`);
 
-  const ynNums = [...dongYnSet];
+    const { data: yoRows } = await q;
 
-  // 대표소유주 · consent · 납부 — 병렬 조회
-  const [yoResult, cResult, pResult, propResult] = await Promise.all([
-    _supabase.from('yeonbun_owner').select('연번, owner:owner_id(id, 이름, 전화번호, 거주구분)')
-      .in('연번', ynNums).eq('대표소유주', true),
-    _supabase.from('consent').select('연번, 차수, 상태').in('연번', ynNums),
-    _supabase.from('payment').select('연번').in('연번', ynNums),
-    _supabase.from('property').select('부동산코드, 동, 호, 전유면적, 대지크기')
-      .eq('동', dong).order('호', { ascending: true }),
-  ]);
+    // 동 필터 — property.동이 null인 행 제거
+    const rows = (yoRows || []).filter(r => r.property?.동 === dong);
 
-  const repMap = {};
-  (yoResult.data || []).forEach(r => {
-    repMap[r['연번']] = {
-      이름: r.owner?.이름 || '—',
-      전화번호: r.owner?.전화번호 || '',
-      거주구분: r.owner?.거주구분 || '',
-      owner_id: r.owner?.id
-    };
-  });
-
-  const consentMap = {};
-  (cResult.data || []).forEach(r => {
-    if (!consentMap[r['연번']]) consentMap[r['연번']] = {};
-    consentMap[r['연번']][r['차수']] = r['상태'];
-  });
-
-  const paySet = new Set();
-  (pResult.data || []).forEach(r => paySet.add(r['연번']));
-
-  const propMap = {};
-  (propResult.data || []).forEach(p => { propMap[p['부동산코드']] = p; });
-
-  // 이름 필터 후 카드 렌더링
-  let filtered = ynNums.filter(yn => {
-    if (!nameKw) return true;
-    return repMap[yn]?.이름?.includes(nameKw);
-  });
-
-  // 연번 오름차순 정렬
-  filtered.sort((a, b) => a - b);
-
-  document.getElementById('cnt-lbl').textContent = `${filtered.length}건 표시`;
-
-  if (filtered.length === 0) {
-    wrap.innerHTML = '<div class="empty-msg">검색 결과 없음</div>';
-    return;
-  }
-
-  wrap.innerHTML = filtered.map(yn => {
-    // 해당 연번의 대표 부동산코드 찾기
-    const pid = Object.entries(propCodeToYn).find(([code, n]) => n === yn && propCodeToDong[code] === dong)?.[0] || '';
-    const prop = propMap[pid] || {};
-    const rep = repMap[yn] || {};
-    const cm = consentMap[yn] || {};
-    const paid = paySet.has(yn);
-
-    function cval(차수) {
-      const s = cm[차수];
-      if (s === '제출') return `<div class="c-val c-y">○</div>`;
-      if (s === '반대') return `<div class="c-val c-n">✕</div>`;
-      return `<div class="c-val c-dash">—</div>`;
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-msg">검색 결과 없음</div>';
+      document.getElementById('cnt-lbl').textContent = '0건 표시';
+      return;
     }
 
-    return `
-      <div class="ocard" onclick="openPopup(${yn})">
-        <div class="yn-line">연번 <span class="yn-num">${yn}</span> · ${esc(pid)}</div>
-        <div class="info-row">
-          <span class="info-name">${esc(rep.이름)}</span>
-          <span class="${paid ? 'info-pay-y' : 'info-pay-n'}">${paid ? '납부' : '미납'}</span>
-        </div>
-        <div class="info-row2">
-          ${rep.전화번호
-            ? `<span class="info-tel">${esc(rep.전화번호)}</span>`
-            : `<span class="info-notel">연락처 없음</span>`}
-          <span class="tag ${rep.거주구분 === '거주' ? 'tag-res-y' : 'tag-res-n'}">${esc(rep.거주구분||'—')}</span>
-        </div>
-        <div class="divider"></div>
-        <div class="consent-grid">
-          <div class="c-col"><span class="c-lbl">사전</span>${cval(1)}</div>
-          <div class="c-col"><span class="c-lbl">컨설팅</span>${cval(2)}</div>
-          <div class="c-col"><span class="c-lbl">선도지구</span>${cval(3)}</div>
-          <div class="c-col"><span class="c-lbl">주민대표단</span>${cval(4)}</div>
-        </div>
-      </div>`;
-  }).join('');
+    const ynNums = rows.map(r => r['연번']);
+
+    // consent · 납부 — 병렬 조회
+    const [cResult, pResult] = await Promise.all([
+      _supabase.from('consent').select('연번, 차수, 상태').in('연번', ynNums),
+      _supabase.from('payment').select('연번').in('연번', ynNums),
+    ]);
+
+    const consentMap = {};
+    (cResult.data || []).forEach(r => {
+      if (!consentMap[r['연번']]) consentMap[r['연번']] = {};
+      consentMap[r['연번']][r['차수']] = r['상태'];
+    });
+    const paySet = new Set((pResult.data || []).map(r => r['연번']));
+
+    document.getElementById('cnt-lbl').textContent = `${rows.length}건 표시`;
+
+    wrap.innerHTML = rows.map(r => {
+      const yn = r['연번'];
+      const pid = r.property?.부동산코드 || '';
+      const rep = r.owner || {};
+      const cm = consentMap[yn] || {};
+      const paid = paySet.has(yn);
+
+      function cval(차수) {
+        const s = cm[차수];
+        if (s === '제출') return `<div class="c-val c-y">○</div>`;
+        if (s === '반대') return `<div class="c-val c-n">✕</div>`;
+        return `<div class="c-val c-dash">—</div>`;
+      }
+
+      return `
+        <div class="ocard" onclick="openPopup(${yn})">
+          <div class="yn-line">연번 <span class="yn-num">${yn}</span> · ${esc(pid)}</div>
+          <div class="info-row">
+            <span class="info-name">${esc(rep.이름||'—')}</span>
+            <span class="${paid ? 'info-pay-y' : 'info-pay-n'}">${paid ? '납부' : '미납'}</span>
+          </div>
+          <div class="info-row2">
+            ${rep.전화번호
+              ? `<span class="info-tel">${esc(rep.전화번호)}</span>`
+              : `<span class="info-notel">연락처 없음</span>`}
+            <span class="tag ${rep.거주구분 === '거주' ? 'tag-res-y' : 'tag-res-n'}">${esc(rep.거주구분||'—')}</span>
+          </div>
+          <div class="divider"></div>
+          <div class="consent-grid">
+            <div class="c-col"><span class="c-lbl">사전</span>${cval(1)}</div>
+            <div class="c-col"><span class="c-lbl">컨설팅</span>${cval(2)}</div>
+            <div class="c-col"><span class="c-lbl">선도지구</span>${cval(3)}</div>
+            <div class="c-col"><span class="c-lbl">주민대표단</span>${cval(4)}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty-msg">오류: ${e.message}</div>`;
+  }
 }
 
 // ════════════════════════════════════════════════
