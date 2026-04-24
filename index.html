@@ -871,13 +871,13 @@ async function loadLookup() {
 
       return `
         <div class="ocard" onclick="openPopup(${yn})">
-          <div class="yn-line">
+          <div class="yn-line" style="display:flex;align-items:center;justify-content:space-between">
             <span style="font-weight:600">${esc(pid)}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px">
-            <span class="tag ${rep.소유형태==='공동'?'badge-joint':'tag-res-y'}" style="font-size:10px;padding:1px 7px">${rep.소유형태||'단독'}</span>
-            ${propCount > 1 ? `<span style="font-size:10px;font-weight:600;color:#8B2FC9;background:#F3E8FF;padding:1px 7px;border-radius:4px">다주택</span>` : ''}
-            <span style="font-size:10px;color:#999">연번 <strong style="color:#1e3a5f">${yn}</strong></span>
+            <span style="display:flex;align-items:center;gap:5px">
+              <span class="tag ${rep.소유형태==='공동'?'badge-joint':'tag-res-y'}" style="font-size:10px;padding:1px 7px">${rep.소유형태||'단독'}</span>
+              ${propCount > 1 ? `<span style="font-size:10px;font-weight:600;color:#8B2FC9;background:#F3E8FF;padding:1px 7px;border-radius:4px">다주택</span>` : ''}
+              <span style="font-size:10px;color:#999">연번 <strong style="color:#1e3a5f">${yn}</strong></span>
+            </span>
           </div>
           <div class="info-row">
             <span class="info-name">${esc(rep.이름||'—')}${rep.소유형태==='공동'?`<span class="badge-joint" style="margin-left:5px;font-size:10px">외 ${rep.공동인원-1}명</span>`:''}</span>
@@ -1110,6 +1110,7 @@ async function loadActivityLog() {
   let q = _supabase
     .from('activity_log')
     .select('연번, 활동유형, 결과, 내용, 담당자, 활동일시')
+    .eq('담당자', currentUser.name)
     .order('활동일시', { ascending: false })
     .limit(100);
 
