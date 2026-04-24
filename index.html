@@ -819,10 +819,11 @@ async function loadLookup() {
       };
     });
 
-    // 연번별 총 부동산 수
+    // 연번별 총 부동산 수 — pidToYn 기반으로 계산 (타이밍 문제 방지)
+    // allYeonbunProperty는 로드 타이밍에 따라 비어있을 수 있어 사용 안 함
     const ynPropCount = {};
-    allYeonbunProperty.forEach(r => {
-      ynPropCount[r['연번']] = (ynPropCount[r['연번']] || 0) + 1;
+    Object.values(pidToYn).forEach(yn => {
+      ynPropCount[yn] = (ynPropCount[yn] || 0) + 1;
     });
 
     const consentMap = {};
@@ -1021,10 +1022,8 @@ async function loadPopupConsent(연번) {
     .eq('연번', 연번).order('차수', { ascending: true });
 
   const roundNames = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:'4차 주민대표단',5:'5차 입안제안',6:'6차 추진위원회'};
-  // DB 행을 차수 키로 맵핑
   const rowMap = {};
   (rows || []).forEach(r => { rowMap[r['차수']] = r; });
-  // 1~6차 항상 전체 표시 (DB에 행 없으면 미제출로)
   const allRounds = [1, 2, 3, 4, 5, 6];
 
   p2.innerHTML = allRounds.map(차수 => {
