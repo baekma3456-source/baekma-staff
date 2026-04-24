@@ -752,14 +752,13 @@ async function loadLookup() {
 
     const propCodes = propRows.map(r => r['부동산코드']);
 
-    // 2단계: 해당 부동산코드의 연번 목록
-    // 캐시(propCodeToYn)가 있으면 활용, 없으면 DB 조회
-    let ynSet = new Set();
-    propCodes.forEach(code => { if (propCodeToYn[code]) ynSet.add(propCodeToYn[code]); });
-
-    if (ynSet.size === 0) {
+    // 2단계: 해당 부동산코드의 연번 목록 — 50개씩 나눠서 조회 (URL 길이 제한 우회)
+    const ynSet = new Set();
+    const chunkSize = 50;
+    for (let i = 0; i < propCodes.length; i += chunkSize) {
+      const chunk = propCodes.slice(i, i + chunkSize);
       const { data: ypRows } = await _supabase
-        .from('yeonbun_property').select('연번').in('부동산코드', propCodes);
+        .from('yeonbun_property').select('연번').in('부동산코드', chunk);
       (ypRows || []).forEach(r => ynSet.add(r['연번']));
     }
 
@@ -771,22 +770,28 @@ async function loadLookup() {
 
     const ynNums = [...ynSet].sort((a, b) => a - b);
 
-    // 3단계: 연번 기준 대표소유주 · consent · 납부 병렬 조회
-    // 대표소유주 없는 경우 대비해 전체 소유주 조회 후 JS에서 처리
-    const [yoResult, cResult, pResult] = await Promise.all([
-      _supabase.from('yeonbun_owner')
-        .select('연번, 부번, 대표소유주, owner:owner_id(id, 이름, 전화번호, 거주구분)')
-        .in('연번', ynNums),
-      _supabase.from('consent')
-        .select('연번, 차수, 상태').in('연번', ynNums),
-      _supabase.from('payment')
-        .select('연번').in('연번', ynNums),
-    ]);
+    // 3단계: 연번 기준 대표소유주 · consent · 납부 — 100개씩 청크 조회
+    const yoAll = [], cAll = [], pAll = [];
+    for (let i = 0; i < ynNums.length; i += 100) {
+      const chunk = ynNums.slice(i, i + 100);
+      const [yoR, cR, pR] = await Promise.all([
+        _supabase.from('yeonbun_owner')
+          .select('연번, 부번, 대표소유주, owner:owner_id(id, 이름, 전화번호, 거주구분)')
+          .in('연번', chunk),
+        _supabase.from('consent')
+          .select('연번, 차수, 상태').in('연번', chunk),
+        _supabase.from('payment')
+          .select('연번').in('연번', chunk),
+      ]);
+      yoAll.push(...(yoR.data || []));
+      cAll.push(...(cR.data || []));
+      pAll.push(...(pR.data || []));
+    }
 
     // 연번별 대표소유주 추출 — 없으면 부번 최솟값으로 fallback
     const repMap = {};
     const ynOwnerRows = {};
-    (yoResult.data || []).forEach(r => {
+    yoAll.forEach(r => {
       const yn = r['연번'];
       if (!ynOwnerRows[yn]) ynOwnerRows[yn] = [];
       ynOwnerRows[yn].push(r);
@@ -804,12 +809,12 @@ async function loadLookup() {
     });
 
     const consentMap = {};
-    (cResult.data || []).forEach(r => {
+    cAll.forEach(r => {
       if (!consentMap[r['연번']]) consentMap[r['연번']] = {};
       consentMap[r['연번']][r['차수']] = r['상태'];
     });
 
-    const paySet = new Set((pResult.data || []).map(r => r['연번']));
+    const paySet = new Set(pAll.map(r => r['연번']));
 
     // 이름 필터
     let filtered = ynNums.filter(yn =>
@@ -823,11 +828,13 @@ async function loadLookup() {
       return;
     }
 
-    // 연번 → 대표 부동산코드 매핑
+    // 연번 → 대표 부동산코드 매핑 (조회한 yeonbun_property 데이터 활용)
     const ynToPid = {};
-    propCodes.forEach(code => {
-      const yn = propCodeToYn[code];
-      if (yn && !ynToPid[yn]) ynToPid[yn] = code;
+    (ypRows || []).forEach(r => {
+      // 해당 동의 부동산코드만 매핑
+      if (propCodes.includes(r['부동산코드']) && !ynToPid[r['연번']]) {
+        ynToPid[r['연번']] = r['부동산코드'];
+      }
     });
 
     wrap.innerHTML = filtered.map(yn => {
