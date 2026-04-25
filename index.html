@@ -521,6 +521,11 @@ async function sbGet(path) {
 }
 
 // 전체 데이터 로드 — range 페이지네이션으로 1000건 제한 우회
+// KST(+09:00) 기준 현재 시각 ISO 문자열 반환
+function nowKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00');
+}
+
 async function fetchAll(table, selectCols, filter = null) {
   const PAGE = 1000;
   let all = [], from = 0;
@@ -1447,9 +1452,9 @@ const ROUND_NAMES = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:
         차수: selectedRound,
         상태: '제출',
         접수방법: selectedMethod,
-        제출일시: new Date().toISOString(),
+        제출일시: nowKST(),
         수정자: currentUser.name,
-        수정일시: new Date().toISOString()
+        수정일시: nowKST()
       },
       { onConflict: '연번,차수' }
     );
@@ -1472,7 +1477,7 @@ const ROUND_NAMES = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:
     결과: 결과텍스트,
     내용: document.getElementById('memo-area').value.trim() || null,
     담당자: currentUser.name,
-    활동일시: new Date().toISOString()
+    활동일시: nowKST()
   });
 
   this.disabled = false; this.textContent = '작성 완료';
