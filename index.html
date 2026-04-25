@@ -526,6 +526,18 @@ function nowKST() {
   return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('Z', '+09:00');
 }
 
+// DB 타임스탬프를 브라우저 변환 없이 그대로 표시
+// "+09:00" 저장값 → "04. 25. 09:03" 형태로 파싱
+function fmtKST(ts, showTime = true) {
+  if (!ts) return '—';
+  // "2026-04-25T09:03:35.035+09:00" 또는 "2026-04-25 09:03:35.035+09:00" 형태
+  const s = ts.replace('T', ' ');
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
+  if (!m) return ts;
+  if (showTime) return `${m[2]}. ${m[3]}. ${m[4]}:${m[5]}`;
+  return `${m[2]}. ${m[3]}.`;
+}
+
 async function fetchAll(table, selectCols, filter = null) {
   const PAGE = 1000;
   let all = [], from = 0;
@@ -1067,7 +1079,7 @@ async function loadPopupConsent(연번) {
     const badge = s === '제출' ? `<span class="badge-o">제출</span>`
       : s === '반대' ? `<span class="badge-op">반대</span>`
       : `<span class="badge-dash">미제출</span>`;
-    const dt = r['제출일시'] ? new Date(r['제출일시']).toLocaleDateString('ko-KR') : '';
+    const dt = r['제출일시'] ? fmtKST(r['제출일시'], false) : '';
     return `
       <div class="consent-item">
         <span>${roundNames[차수]}</span>
@@ -1134,7 +1146,7 @@ async function loadPopupAct(연번) {
   p4.innerHTML = `
     <button class="new-btn" style="width:100%;margin-bottom:12px" onclick="openFormFromPopup(${연번})">+ 활동 기록 작성</button>
     ` + rows.map(r => {
-    const dt = r['활동일시'] ? new Date(r['활동일시']).toLocaleDateString('ko-KR') : '—';
+    const dt = r['활동일시'] ? fmtKST(r['활동일시'], false) : '—';
     const addr = r['부동산코드'] ? pidAddrMap[r['부동산코드']] : null;
     return `
       <div class="act-mini-item">
@@ -1211,7 +1223,7 @@ async function loadActivityLog() {
   }
 
   wrap.innerHTML = rows.map(r => {
-    const dt = r['활동일시'] ? new Date(r['활동일시']).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+    const dt = r['활동일시'] ? fmtKST(r['활동일시'], true) : '—';
     const pid = r['부동산코드'];
     const addr = pid ? pidAddrMap[pid] : ynAddrMap[r['연번']];
     const pidLabel = pid || `연번 ${r['연번']}`;
