@@ -394,7 +394,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
         <button class="result-btn" data-val="부재">부재</button>
         <button class="result-btn" data-val="기타">기타</button>
       </div>
-      <!-- 제출완료 선택 시 차수 선택 UI -->
       <div class="round-select-wrap" id="round-select-wrap">
         <div class="round-select-lbl">📋 몇 차 동의서를 제출하셨나요?</div>
         <div class="round-btn-grid">
@@ -406,7 +405,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
           <button class="round-btn" data-round="6">6차 추진위원회</button>
         </div>
       </div>
-      <!-- 차수 선택 후 접수방법 선택 UI -->
       <div class="method-select-wrap" id="method-select-wrap">
         <div class="method-select-lbl">📬 접수 방법을 선택해주세요</div>
         <div class="method-btn-grid">
@@ -1265,8 +1263,8 @@ function resultClass(결과) {
 // ════════════════════════════════════════════════
 let selectedActType = null;
 let selectedResult  = null;
-let selectedRound   = null; // 제출완료 시 선택한 차수
-let selectedMethod  = null; // 제출완료 시 선택한 접수방법 (서면/전자)
+let selectedRound   = null;
+let selectedMethod  = null;
 let selectedOwner   = null; // { 연번, owner_id, 이름 }
 
 document.getElementById('new-btn').addEventListener('click', openForm);
@@ -1307,7 +1305,6 @@ document.querySelectorAll('.result-btn').forEach(btn => {
     document.querySelectorAll('.result-btn').forEach(b => b.classList.remove('sel'));
     this.classList.add('sel');
     selectedResult = this.dataset.val;
-    // 제출완료 → 차수 선택 표시, 나머지 → 차수/접수방법 숨김
     if (selectedResult === '제출완료') {
       document.getElementById('round-select-wrap').style.display = 'block';
     } else {
@@ -1320,21 +1317,17 @@ document.querySelectorAll('.result-btn').forEach(btn => {
   });
 });
 
-// 차수 버튼 클릭 → 접수방법 선택 표시
 document.querySelectorAll('.round-btn').forEach(btn => {
   btn.addEventListener('click', function () {
     document.querySelectorAll('.round-btn').forEach(b => b.classList.remove('sel'));
     this.classList.add('sel');
     selectedRound = parseInt(this.dataset.round);
-    // 차수 선택 후 접수방법 선택 UI 표시
     document.getElementById('method-select-wrap').style.display = 'block';
-    // 이전 접수방법 선택 초기화
     selectedMethod = null;
     document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('sel'));
   });
 });
 
-// 접수방법 버튼 클릭
 document.querySelectorAll('.method-btn').forEach(btn => {
   btn.addEventListener('click', function () {
     document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('sel'));
@@ -1434,18 +1427,19 @@ async function searchOwner(q) {
   });
 }
 
-const ROUND_NAMES = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:'4차 주민대표단',5:'5차 입안제안',6:'6차 추진위원회'};
-
 document.getElementById('submit-btn').addEventListener('click', async function () {
   if (!selectedActType) { alert('활동 유형을 선택해주세요.'); return; }
   if (!selectedOwner)   { alert('소유주를 선택해주세요.'); return; }
   if (!selectedResult)  { alert('결과를 선택해주세요.'); return; }
-  if (selectedResult === '제출완료' && !selectedRound)  { alert('제출한 동의서 차수를 선택해주세요.'); return; }
-  if (selectedResult === '제출완료' && !selectedMethod) { alert('접수 방법(서면/전자)을 선택해주세요.'); return; }
 
   this.disabled = true; this.textContent = '저장 중...';
 
-  // 제출완료 → consent 테이블에 '제출' + 접수방법 upsert
+const ROUND_NAMES = {1:'1차 사전',2:'2차 컨설팅',3:'3차 선도지구',4:'4차 주민대표단',5:'5차 입안제안',6:'6차 추진위원회'};
+
+  if (selectedResult === '제출완료' && !selectedRound)  { alert('제출한 동의서 차수를 선택해주세요.'); this.disabled=false; this.textContent='작성 완료'; return; }
+  if (selectedResult === '제출완료' && !selectedMethod) { alert('접수 방법(서면/전자)을 선택해주세요.'); this.disabled=false; this.textContent='작성 완료'; return; }
+
+  // 제출완료 → consent 테이블 upsert (수정자·수정일시 포함)
   if (selectedResult === '제출완료') {
     const { error: cErr } = await _supabase.from('consent').upsert(
       {
@@ -1453,7 +1447,9 @@ document.getElementById('submit-btn').addEventListener('click', async function (
         차수: selectedRound,
         상태: '제출',
         접수방법: selectedMethod,
-        제출일시: new Date().toISOString()
+        제출일시: new Date().toISOString(),
+        수정자: currentUser.name,
+        수정일시: new Date().toISOString()
       },
       { onConflict: '연번,차수' }
     );
@@ -1464,7 +1460,6 @@ document.getElementById('submit-btn').addEventListener('click', async function (
     }
   }
 
-  // activity_log 결과에 차수 + 접수방법 포함
   const 결과텍스트 = selectedResult === '제출완료'
     ? `제출완료(${ROUND_NAMES[selectedRound]}·${selectedMethod})`
     : selectedResult;
@@ -1486,6 +1481,7 @@ document.getElementById('submit-btn').addEventListener('click', async function (
 
   closeForm();
   loadActivityLog();
+  loadLookup(); // 소유주명부 카드 동의현황 즉시 갱신
 });
 
 // ════════════════════════════════════════════════
