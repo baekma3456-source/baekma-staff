@@ -320,6 +320,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
     <div class="tab-panel" id="panel-1">
       <div class="filter-row">
         <select id="danji-sel-lookup">
+          <option value="all">전체 단지</option>
           <option value="3">3단지</option>
           <option value="4">4단지</option>
           <option value="5">5단지</option>
@@ -329,7 +330,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
         <select id="dong-sel-lookup"></select>
       </div>
       <div class="search-row">
-        <input id="name-search-input" placeholder="이름 검색 (선택)" autocomplete="off">
+        <input id="name-search-input" placeholder="이름·부동산코드·전화번호·연번 검색" autocomplete="off">
         <button onclick="loadLookup()">검색</button>
       </div>
       <div class="meta-row">
@@ -347,7 +348,13 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:13px
         <span class="list-lbl">활동 기록</span>
         <button class="new-btn" id="new-btn">+ 새로 작성</button>
       </div>
-      <div style="display:flex;gap:6px;margin-top:8px">
+      <div style="display:flex;gap:5px;margin-top:8px">
+        <button onclick="setDateRange('today')" id="qbtn-today" style="flex:1;padding:5px 4px;font-size:11px;border:0.5px solid #1e3a5f;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-family:inherit;font-weight:500">오늘</button>
+        <button onclick="setDateRange('week')"  id="qbtn-week"  style="flex:1;padding:5px 4px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#555;cursor:pointer;font-family:inherit">일주일</button>
+        <button onclick="setDateRange('month')" id="qbtn-month" style="flex:1;padding:5px 4px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#555;cursor:pointer;font-family:inherit">한달</button>
+        <button onclick="setDateRange('all')"   id="qbtn-all"   style="flex:1;padding:5px 4px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;color:#555;cursor:pointer;font-family:inherit">전체</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
         <input type="date" id="act-date-from" class="f-input" style="flex:1;padding:6px 8px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;font-family:inherit;outline:none">
         <span style="line-height:32px;font-size:11px;color:#888">~</span>
         <input type="date" id="act-date-to" class="f-input" style="flex:1;padding:6px 8px;font-size:11px;border:0.5px solid rgba(0,0,0,0.25);border-radius:6px;background:#fff;font-family:inherit;outline:none">
@@ -616,6 +623,9 @@ async function initMain() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('act-date-from').value = today;
   document.getElementById('act-date-to').value = today;
+  // 오늘 버튼 활성 표시
+  const todayBtn = document.getElementById('qbtn-today');
+  if (todayBtn) { todayBtn.style.background='#1e3a5f'; todayBtn.style.color='#fff'; todayBtn.style.borderColor='#1e3a5f'; todayBtn.style.fontWeight='500'; }
 
   await loadSummaryData();
   await Promise.all([loadLookup(), loadActivityLog()]);
@@ -783,33 +793,109 @@ document.getElementById('danji-sel-lookup').addEventListener('change', function 
 
 function populateDongSel(danjiKey) {
   const sel = document.getElementById('dong-sel-lookup');
+  if (danjiKey === 'all') {
+    sel.innerHTML = '<option value="all">전체 동</option>';
+    return;
+  }
   const dongs = DANJI_DONG[danjiKey] || [];
-  sel.innerHTML = dongs.map(d => `<option value="${d}">${d}</option>`).join('');
+  sel.innerHTML = '<option value="all">전체 동</option>' + dongs.map(d => `<option value="${d}">${d}</option>`).join('');
 }
 
 // 동 변경 시 자동 조회
 document.getElementById('dong-sel-lookup').addEventListener('change', loadLookup);
 
-// 초기 dong 목록 세팅 (301동 디폴트)
-populateDongSel('3');
+// 초기 dong 목록 세팅 (전체 디폴트)
+populateDongSel('all');
 
 async function loadLookup() {
-  const dong = document.getElementById('dong-sel-lookup').value;
-  const nameKw = document.getElementById('name-search-input').value.trim();
-  const wrap = document.getElementById('cards-wrap');
+  const danjiKey = document.getElementById('danji-sel-lookup').value;
+  const dongVal  = document.getElementById('dong-sel-lookup').value;
+  const kw       = document.getElementById('name-search-input').value.trim();
+  const wrap     = document.getElementById('cards-wrap');
 
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
 
   try {
-    // 1단계: 해당 동의 부동산 목록 (부동산코드 기준 — 카드 1개 = 부동산 1채)
-    const { data: propRows } = await _supabase
-      .from('property')
-      .select('부동산코드, 동, 호, 전유면적')
-      .eq('동', dong)
-      .order('호', { ascending: false });
+    // ── 1단계: 대상 부동산 목록 조회 ──────────────────────────────
+    let propRows = [];
+
+    if (kw) {
+      // 키워드 검색 모드: 연번·부동산코드·이름·전화번호 통합
+      const isNum = /^\d+$/.test(kw);
+
+      if (isNum) {
+        // 연번으로 직접 검색
+        const { data: regByYn } = await _supabase
+          .from('registration').select('부동산코드').eq('연번', parseInt(kw)).eq('is_current', true);
+        const codes = (regByYn || []).map(r => r['부동산코드']);
+        if (codes.length > 0) {
+          const { data } = await _supabase.from('property').select('부동산코드, 동, 호, 전유면적').in('부동산코드', codes);
+          propRows = data || [];
+        }
+      }
+
+      if (propRows.length === 0) {
+        // 부동산코드 직접 검색
+        const { data: byCode } = await _supabase
+          .from('property').select('부동산코드, 동, 호, 전유면적').ilike('부동산코드', `%${kw}%`).limit(100);
+        if (byCode && byCode.length > 0) propRows = byCode;
+      }
+
+      if (propRows.length === 0) {
+        // 이름 또는 전화번호로 owner 검색
+        const cleanKw = kw.replace(/[-\s]/g, '');
+        const isPhone = /^\d{3,}$/.test(cleanKw);
+        let ownerQ = _supabase.from('owner').select('id');
+        ownerQ = isPhone
+          ? ownerQ.ilike('전화번호', `%${cleanKw}%`)
+          : ownerQ.ilike('이름', `%${kw}%`);
+        const { data: oRows } = await ownerQ.limit(50);
+        if (oRows && oRows.length > 0) {
+          const ownerIds = oRows.map(o => o.id);
+          const chunks = [];
+          for (let i = 0; i < ownerIds.length; i += 50) chunks.push(ownerIds.slice(i, i + 50));
+          const regResults = await Promise.all(chunks.map(ch =>
+            _supabase.from('registration').select('부동산코드').in('owner_id', ch).eq('is_current', true)
+          ));
+          const codes = [...new Set(regResults.flatMap(r => (r.data || []).map(x => x['부동산코드'])))];
+          if (codes.length > 0) {
+            const cChunks = [];
+            for (let i = 0; i < codes.length; i += 100) cChunks.push(codes.slice(i, i + 100));
+            const pResults = await Promise.all(cChunks.map(ch =>
+              _supabase.from('property').select('부동산코드, 동, 호, 전유면적').in('부동산코드', ch)
+            ));
+            propRows = pResults.flatMap(r => r.data || []);
+          }
+        }
+      }
+
+      // 단지/동 필터 추가 적용 (키워드 검색 후)
+      if (danjiKey !== 'all') {
+        const allowedDongs = dongVal === 'all' ? (DANJI_DONG[danjiKey] || []) : [dongVal];
+        propRows = propRows.filter(p => allowedDongs.includes(p['동']));
+      } else if (dongVal !== 'all') {
+        propRows = propRows.filter(p => p['동'] === dongVal);
+      }
+
+    } else {
+      // 키워드 없음: 단지/동 기준 조회
+      let pQ = _supabase.from('property').select('부동산코드, 동, 호, 전유면적');
+
+      if (danjiKey !== 'all') {
+        const dongs = dongVal === 'all' ? (DANJI_DONG[danjiKey] || []) : [dongVal];
+        pQ = dongs.length === 1 ? pQ.eq('동', dongs[0]) : pQ.in('동', dongs);
+      } else if (dongVal !== 'all') {
+        pQ = pQ.eq('동', dongVal);
+      } else {
+        // 전체: 너무 많을 수 있으므로 경고 없이 200건 제한
+        pQ = pQ.limit(200);
+      }
+      const { data } = await pQ.order('호', { ascending: false });
+      propRows = data || [];
+    }
 
     if (!propRows || propRows.length === 0) {
-      wrap.innerHTML = '<div class="empty-msg">부동산 정보 없음</div>';
+      wrap.innerHTML = '<div class="empty-msg">검색 결과 없음</div>';
       document.getElementById('cnt-lbl').textContent = '0건 표시';
       return;
     }
@@ -818,7 +904,7 @@ async function loadLookup() {
     const propMap = {};
     propRows.forEach(p => { propMap[p['부동산코드']] = p; });
 
-    // 2단계: 부동산코드 → 연번 매핑 (50개씩 병렬)
+    // ── 2단계: 부동산코드 → 연번 매핑 ───────────────────────────
     const pidToYn = {};
     const ypChunks = [];
     for (let i = 0; i < propCodes.length; i += 50) ypChunks.push(propCodes.slice(i, i + 50));
@@ -827,10 +913,9 @@ async function loadLookup() {
     );
     ypResults.forEach(({ data }) => (data || []).forEach(r => { pidToYn[r['부동산코드']] = r['연번']; }));
 
-    // 연번 목록
     const ynNums = [...new Set(Object.values(pidToYn))];
 
-    // 3단계: 연번 기준 소유주·동의·납부 조회 (100개씩 병렬)
+    // ── 3단계: 연번 기준 소유주·동의·납부 조회 ──────────────────
     const yoAll = [], cAll = [], pAll = [];
     const ynChunks = [];
     for (let i = 0; i < ynNums.length; i += 100) ynChunks.push(ynNums.slice(i, i + 100));
@@ -847,7 +932,7 @@ async function loadLookup() {
       pAll.push(...(pR.data || []));
     });
 
-    // 연번별 대표소유주 (없으면 부번 최솟값 fallback)
+    // 연번별 대표소유주
     const repMap = {};
     const ynOwnerRows = {};
     yoAll.forEach(r => {
@@ -869,10 +954,27 @@ async function loadLookup() {
       };
     });
 
-    // 연번별 총 부동산 수
-    const ynPropCount = {};
-    allYeonbunProperty.forEach(r => {
-      ynPropCount[r['연번']] = (ynPropCount[r['연번']] || 0) + 1;
+    // 다주택 판단: owner_id가 여러 부동산코드를 보유하는 경우
+    // registration에서 owner_id → Set(부동산코드) 전체 조회 (is_current=true)
+    const ownerIds = [...new Set(yoAll.map(r => r.owner?.id).filter(Boolean))];
+    const ownerPropMap = {}; // owner_id → Set of 부동산코드 (전체 DB 기준)
+    if (ownerIds.length > 0) {
+      const oidChunks = [];
+      for (let i = 0; i < ownerIds.length; i += 100) oidChunks.push(ownerIds.slice(i, i + 100));
+      const oidResults = await Promise.all(oidChunks.map(ch =>
+        _supabase.from('registration').select('owner_id, 부동산코드').in('owner_id', ch).eq('is_current', true)
+      ));
+      oidResults.forEach(({ data }) => (data || []).forEach(r => {
+        if (!ownerPropMap[r['owner_id']]) ownerPropMap[r['owner_id']] = new Set();
+        ownerPropMap[r['owner_id']].add(r['부동산코드']);
+      }));
+    }
+    // 연번 → 다주택 여부: 해당 연번 소유주 중 1명이라도 부동산코드 2개 이상 보유 시 다주택
+    const ynIsMulti = {};
+    yoAll.forEach(r => {
+      const oid = r.owner?.id;
+      if (!oid) return;
+      if ((ownerPropMap[oid]?.size || 0) > 1) ynIsMulti[r['연번']] = true;
     });
 
     const consentMap = {};
@@ -882,14 +984,7 @@ async function loadLookup() {
     });
 
     const paySet = new Set(pAll.map(r => r['연번']));
-
-    // 이름 필터
-    let filtered = propCodes.filter(pid => {
-      const yn = pidToYn[pid];
-      if (!yn) return false;
-      if (!nameKw) return true;
-      return repMap[yn]?.이름?.includes(nameKw);
-    });
+    const filtered = propCodes.filter(pid => pidToYn[pid]);
 
     document.getElementById('cnt-lbl').textContent = `${filtered.length}건 표시`;
 
@@ -898,7 +993,6 @@ async function loadLookup() {
       return;
     }
 
-    // 호수 숫자 기준 내림차순 정렬
     filtered.sort((a, b) => {
       const hoA = parseInt((propMap[a]?.호 || '0').replace(/\D/g, '')) || 0;
       const hoB = parseInt((propMap[b]?.호 || '0').replace(/\D/g, '')) || 0;
@@ -911,7 +1005,7 @@ async function loadLookup() {
       const rep = repMap[yn] || {};
       const cm = consentMap[yn] || {};
       const paid = paySet.has(yn);
-      const propCount = ynPropCount[yn] || 1;
+      const isMulti = !!ynIsMulti[yn];
 
       function cval(차수) {
         const s = cm[차수];
@@ -926,7 +1020,7 @@ async function loadLookup() {
             <span style="font-weight:600">${esc(pid)}</span>
             <span style="display:flex;align-items:center;gap:5px">
               <span class="tag ${rep.소유형태==='공동'?'badge-joint':'tag-res-y'}" style="font-size:10px;padding:1px 7px">${rep.소유형태||'단독'}</span>
-              ${propCount > 1 ? `<span style="font-size:10px;font-weight:600;color:#8B2FC9;background:#F3E8FF;padding:1px 7px;border-radius:4px">다주택</span>` : ''}
+              ${isMulti ? `<span style="font-size:10px;font-weight:600;color:#8B2FC9;background:#F3E8FF;padding:1px 7px;border-radius:4px">다주택</span>` : ''}
               <span style="font-size:10px;color:#999">연번 <strong style="color:#1e3a5f">${yn}</strong></span>
             </span>
           </div>
@@ -1166,6 +1260,42 @@ async function loadPopupAct(연번) {
 // ════════════════════════════════════════════════
 // TAB 2: 활동 기록
 // ════════════════════════════════════════════════
+function setDateRange(type) {
+  const today = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  let from, to = fmt(today);
+
+  if (type === 'today') {
+    from = fmt(today);
+  } else if (type === 'week') {
+    const d = new Date(today); d.setDate(d.getDate() - 6);
+    from = fmt(d);
+  } else if (type === 'month') {
+    const d = new Date(today); d.setDate(d.getDate() - 29);
+    from = fmt(d);
+  } else { // all
+    from = ''; to = '';
+  }
+
+  document.getElementById('act-date-from').value = from;
+  document.getElementById('act-date-to').value   = to;
+
+  // 버튼 활성 표시
+  ['today','week','month','all'].forEach(k => {
+    const btn = document.getElementById('qbtn-' + k);
+    if (!btn) return;
+    if (k === type) {
+      btn.style.background = '#1e3a5f'; btn.style.color = '#fff';
+      btn.style.borderColor = '#1e3a5f'; btn.style.fontWeight = '500';
+    } else {
+      btn.style.background = '#fff'; btn.style.color = '#555';
+      btn.style.borderColor = 'rgba(0,0,0,0.25)'; btn.style.fontWeight = '';
+    }
+  });
+
+  loadActivityLog();
+}
+
 async function loadActivityLog() {
   const wrap = document.getElementById('log-list');
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><span class="loading-txt">불러오는 중...</span></div>';
