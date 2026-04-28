@@ -1091,8 +1091,8 @@ async function loadPopupBasic(연번) {
   const [r0, r1] = await Promise.all([
     _supabase.from('registration').select('부동산코드').eq('연번', 연번).eq('is_current', true),
     _supabase.from('registration').select(`
-      부번, 대표소유주, 등기원인일, 소유형태, 등기상주소, 거주구분,
-      owner:owner_id(이름, 전화번호, 성별, 생년월일_사업자번호, 얼마집_인증, 얼마집_인증일)
+      부번, 대표소유주, 등기원인일, 소유형태, 등기상주소, 거주구분, 얼마집_인증, 얼마집_인증일,
+      owner:owner_id(이름, 전화번호, 성별, 생년월일_사업자번호)
     `).eq('연번', 연번).eq('is_current', true),
   ]);
 
@@ -1151,7 +1151,7 @@ async function loadPopupBasic(연번) {
       </div>
       <div class="field-row">
         <span class="field-key">얼마집 인증</span>
-        <span class="field-val">${esc(r.owner?.얼마집_인증||'—')} ${r.owner?.얼마집_인증일?'('+esc(r.owner.얼마집_인증일)+')':''}</span>
+        <span class="field-val">${esc(r['얼마집_인증']||'—')} ${r['얼마집_인증일']?'('+esc(r['얼마집_인증일'])+')':''}</span>
       </div>`).join('')}
   `;
 }
